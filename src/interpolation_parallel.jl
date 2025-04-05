@@ -1,15 +1,39 @@
-function eval_unstructured(
+"""
+    function eval_unstructured(
         interp::NDInterpolation{N_in};
-        kwargs...
-) where {N_in}
+        derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)) where {N_in}
+
+Evaluate the interpolation in the unstructured set of points defined by `t_eval`
+in the interpolation dimensions out of place. That is, `t_eval` must have the same
+length for each interpolation dimension and the interpolation is evaluated at the `zip` if these `t_eval`.
+
+## Keyword arguments
+
+  - `derivative_orders`: The partial derivative order for each interpolation dimension. Defaults to `0` for each.
+"""
+function eval_unstructured(interp::NDInterpolation; kwargs...)
     n_points = length(first(interp.interp_dims).t_eval)
     out = similar(interp.u, (n_points, get_output_size(interp)...))
     eval_unstructured!(out, interp; kwargs...)
 end
 
+"""
+    function eval_unstructured!(
+        out::AbstractArray,
+        interp::NDInterpolation{N_in};
+        derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)) where {N_in}
+
+Evaluate the interpolation in the unstructured set of points defined by `t_eval`
+in the interpolation dimensions in place. That is, `t_eval` must have the same
+length for each interpolation dimension and the interpolation is evaluated at the `zip` if these `t_eval`.
+
+## Keyword arguments
+
+  - `derivative_orders`: The partial derivative order for each interpolation dimension. Defaults to `0` for each.
+"""
 function eval_unstructured!(
         out::AbstractArray,
-        interp::NDInterpolation{N_in},
+        interp::NDInterpolation{N_in};
         derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
 ) where {N_in}
     validate_derivative_orders(derivative_orders)
@@ -27,12 +51,37 @@ function eval_unstructured!(
     return out
 end
 
+"""
+    function eval_grid(
+        interp::NDInterpolation{N_in};
+        derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)) where {N_in}
+
+Evaluate the interpolation in the Cartesian product of the `t_eval` of the interpolation dimensions
+out of place.
+
+## Keyword arguments
+
+  - `derivative_orders`: The partial derivative order for each interpolation dimension. Defaults to `0` for each.
+"""
 function eval_grid(interp::NDInterpolation{N_in}; kwargs...) where {N_in}
     grid_size = map(itp_dim -> length(itp_dim.t_eval), interp.interp_dims)
     out = similar(interp.u, (grid_size..., get_output_size(interp)...))
     eval_grid!(out, interp; kwargs...)
 end
 
+"""
+    function eval_grid!(
+        out::AbstractArray,
+        interp::NDInterpolation{N_in};
+        derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)) where {N_in}
+
+Evaluate the interpolation in the Cartesian product of the `t_eval` of the interpolation dimensions
+in place.
+
+## Keyword arguments
+
+  - `derivative_orders`: The partial derivative order for each interpolation dimension. Defaults to `0` for each.
+"""
 function eval_grid!(
         out::AbstractArray,
         interp::NDInterpolation{N_in};

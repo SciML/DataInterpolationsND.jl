@@ -15,13 +15,13 @@ function _interpolate!(
     tᵢ = ntuple(i -> A.interp_dims[i].t[idx[i]], N_in)
     tᵢ₊₁ = ntuple(i -> A.interp_dims[i].t[idx[i] + 1], N_in)
 
-    # Size of the (hyper)volume `t` is in
+    # Size of the (hyper)rectangle `t` is in
     t_vol = one(eltype(tᵢ))
     for (t₁, t₂) in zip(tᵢ, tᵢ₊₁)
         t_vol *= t₂ - t₁
     end
 
-    # Loop over corners of the interval product `t` is in
+    # Loop over the corners of the (hyper)rectangle `t` is in
     for I in Iterators.product(ntuple(i -> (false, true), N_in)...)
         c = eltype(out)(inv(t_vol))
         for (t_, right_point, d, t₁, t₂) in zip(t, I, derivative_orders, tᵢ, tᵢ₊₁)

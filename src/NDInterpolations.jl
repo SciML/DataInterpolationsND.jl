@@ -5,6 +5,18 @@ using EllipsisNotation
 
 abstract type AbstractInterpolationDimension end
 
+"""
+    NDInterpolation(interp_dims, u)
+
+The interpolation object containing the interpolation dimensions and the data to interpolate `u`.
+Given the number of interpolation dimensions `N_in`, for first `N_in` dimensions of `u`
+the size of `u` along that dimension must match the length of `t` of the corresponding interpolation dimension.
+
+## Arguments
+
+  - `interp_dims`: A tuple of identically typed interpolation dimensions.
+  - `u`: The array to be interpolated.
+"""
 struct NDInterpolation{
     N_in, N_out, ID <: AbstractInterpolationDimension, uType <: AbstractArray}
     u::uType
@@ -46,13 +58,12 @@ function (interp::NDInterpolation{N_in})(
 ) where {N_in}
     validate_derivative_orders(derivative_orders)
     idx = get_idx(interp.interp_dims, t)
-    @assert size(out)==size(interp.u)[(N_in + 1):end] "The size of the out must match the size of the last N_out dimensions of u."
+    @assert size(out)==size(interp.u)[(N_in + 1):end] "The size of out must match the size of the last N_out dimensions of u."
     _interpolate!(out, interp, t, idx, derivative_orders)
 end
 
 # Out of place single input evaluation
-function (interp::NDInterpolation)(t::Tuple{Vararg{Number, N_in}}; kwargs...
-) where {N_in}
+function (interp::NDInterpolation)(t::Tuple{Vararg{Number}}; kwargs...)
     out = make_out(interp, t)
     interp(out, t; kwargs...)
 end
