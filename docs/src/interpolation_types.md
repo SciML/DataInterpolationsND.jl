@@ -24,7 +24,7 @@ interp_dims = (
     LinearInterpolationDimension(t1; t_eval = t1_eval),
     LinearInterpolationDimension(t2; t_eval = t2_eval)
 )
-interp = NDInterpolation(interp_dims, u)
+interp = NDInterpolation(u, interp_dims)
 eval_grid!(out, interp)
 heatmap(out)
 ```
@@ -36,7 +36,7 @@ interp_dims = (
     ConstantInterpolationDimension(t1; t_eval = t1_eval),
     ConstantInterpolationDimension(t2; t_eval = t2_eval)
 )
-interp = NDInterpolation(interp_dims, u)
+interp = NDInterpolation(u, interp_dims)
 eval_grid!(out, interp)
 heatmap(out)
 ```

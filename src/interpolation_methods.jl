@@ -53,7 +53,15 @@ function _interpolate!(
     else
         out .= 0
     end
-    any(>(0), derivative_orders) && return out
+    if any(>(0), derivative_orders)
+        return if any(i -> !isempty(searchsorted(A.interp_dims[i].t, t[i])), 1:N_in)
+            typed_nan(out)
+        else
+            out
+        end
+    end
+    idx = ntuple(
+        i -> t[i] >= A.interp_dims[i].t[end] ? length(A.interp_dims[i].t) : idx[i], N_in)
     if iszero(N_out)
         out = A.u[idx...]
     else

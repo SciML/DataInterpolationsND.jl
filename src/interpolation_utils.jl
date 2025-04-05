@@ -30,16 +30,29 @@ function make_out(
         interp.u, promote_type(eltype(interp.u), map(eltype, t)...), get_output_size(interp))
 end
 
+get_left(::AbstractInterpolationDimension) = false
+get_left(::LinearInterpolationDimension) = true
+
+get_idx_bounds(::AbstractInterpolationDimension) = (1, -1)
+
+get_idx_shift(::AbstractInterpolationDimension) = 0
+get_idx_shift(::LinearInterpolationDimension) = -1
+
 # TODO: Implement a more efficient (GPU compatible) version
 function get_idx(
         interp_dim::AbstractInterpolationDimension,
         t_eval::Number
 )
     (; t) = interp_dim
-    left = (interp_dim isa ConstantInterpolationDimension) ? interp_dim.left : true
-    idx = clamp(searchsortedlast(t, t_eval), 1, length(t) - 1)
-    !left && (idx += 1)
-    idx
+    left = get_left(interp_dim)
+    lb, ub_shift = get_idx_bounds(interp_dim)
+    idx_shift = get_idx_shift(interp_dim)
+    ub = length(t) + ub_shift
+    return if left
+        clamp(searchsortedfirst(t, t_eval) + idx_shift, lb, ub)
+    else
+        clamp(searchsortedlast(t, t_eval) + idx_shift, lb, ub)
+    end
 end
 
 function get_idx(
@@ -68,3 +81,14 @@ end
     i = @index(Global, Linear)
     interp_dim.idx_eval[i] = get_idx(interp_dim, interp_dim.t_eval[i])
 end
+
+function typed_nan(x::AbstractArray{T}) where {T <: AbstractFloat}
+    x .= NaN
+end
+
+function typed_nan(x::AbstractArray{T}) where {T <: Integer}
+    x .= 0
+end
+
+typed_nan(::T) where {T <: Integer} = zero(T)
+typed_nan(::T) where {T <: AbstractFloat} = T(NaN)

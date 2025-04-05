@@ -19,21 +19,24 @@ the size of `u` along that dimension must match the length of `t` of the corresp
 """
 struct NDInterpolation{
     N_in, N_out, ID <: AbstractInterpolationDimension, uType <: AbstractArray}
-    interp_dims::NTuple{N_in, ID}
     u::uType
-    function NDInterpolation(interp_dims, u)
+    interp_dims::NTuple{N_in, ID}
+    function NDInterpolation(u, interp_dims)
+        if interp_dims isa AbstractInterpolationDimension
+            interp_dims = (interp_dims,)
+        end
         N_in = length(interp_dims)
         N_out = ndims(u) - N_in
         @assert N_out≥0 "The number of dimensions of u must be at least the number of interpolation dimensions."
         @assert ntuple(i -> length(interp_dims[i]), N_in)==size(u)[1:N_in] "For the first N_in dimensions of u the length must match the t of the corresponding interpolation dimension."
-        new{N_in, N_out, eltype(interp_dims), typeof(u)}(interp_dims, u)
+        new{N_in, N_out, eltype(interp_dims), typeof(u)}(u, interp_dims)
     end
 end
 
 @adapt_structure NDInterpolation
 
-include("interpolation_utils.jl")
 include("interpolation_dimensions.jl")
+include("interpolation_utils.jl")
 include("interpolation_methods.jl")
 include("interpolation_parallel.jl")
 

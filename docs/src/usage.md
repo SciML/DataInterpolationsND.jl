@@ -30,7 +30,7 @@ t_eval_2 = range(
 using Plots
 
 u = rand(5, 10)
-itp = NDInterpolation(interp_dims, u)
+itp = NDInterpolation(u, interp_dims)
 out = itp.(t_eval_1, t_eval_2')
 heatmap(out)
 ```
@@ -39,7 +39,7 @@ heatmap(out)
 
 ```@example tutorial
 u = reshape(u, 5, 10, 1)
-itp = NDInterpolation(interp_dims, u)
+itp = NDInterpolation(u, interp_dims)
 out = itp.(t_eval_1, t_eval_2')
 heatmap(map(only, out))
 ```
@@ -63,7 +63,7 @@ heatmap(out)
 using ForwardDiff
 
 u = reshape(u, 5, 10)
-itp = NDInterpolation(interp_dims, u)
+itp = NDInterpolation(u, interp_dims)
 ∂₁itp = (t1, t2) ->  ForwardDiff.derivative(t_ -> itp(t_, t2), t1)
 out = ∂₁itp.(t_eval_1, t_eval_2')
 heatmap(out)
@@ -87,7 +87,7 @@ interp_dims = (
     LinearInterpolationDimension(interp_dims[1].t; t_eval = t_eval_1),
     LinearInterpolationDimension(interp_dims[2].t; t_eval = t_eval_2)
 )
-itp = NDInterpolation(interp_dims, u)
+itp = NDInterpolation(u, interp_dims)
 
 out = eval_unstructured(itp)
 heatmap(diagm(out))
@@ -97,7 +97,7 @@ heatmap(diagm(out))
 
 ```@example tutorial
 u = reshape(u, 5, 10, 1)
-itp = NDInterpolation(interp_dims, u)
+itp = NDInterpolation(u, interp_dims)
 out = zeros(100, 100, 1)
 eval_grid!(out, itp)
 heatmap(out[:,:,1])

@@ -64,7 +64,7 @@ out of place.
   - `derivative_orders`: The partial derivative order for each interpolation dimension. Defaults to `0` for each.
 """
 function eval_grid(interp::NDInterpolation{N_in}; kwargs...) where {N_in}
-    grid_size = ntuple(i -> interp.interp_dims[i].t_eval, N_in)
+    grid_size = map(itp_dim -> length(itp_dim.t_eval), interp.interp_dims)
     out = similar(interp.u, (grid_size..., get_output_size(interp)...))
     eval_grid!(out, interp; kwargs...)
 end
