@@ -22,7 +22,7 @@ interpolation_dimensions = (
 # The outputs will be vectors of length 2
 u = rand(5, 7, 2)
 
-interp = NDInterpolation(interpolation_dimensions, u)
+interp = NDInterpolation(u, interpolation_dimensions)
 ```
 
 Evaluation of this vector valued interpolation can be done in place or out of place.
@@ -42,7 +42,7 @@ interpolation_dimensions = (
     LinearInterpolationDimension(t2; t_eval = range(first(t2), last(t2); length = 100))
 )
 
-interp = NDInterpolation(interpolation_dimensions, u)
+interp = NDInterpolation(u, interpolation_dimensions)
 
 # Out of place zipped evaluation
 eval_unstructured(interp) # Yields Matrix of size (100, 2)
