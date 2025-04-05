@@ -7,7 +7,7 @@ makedocs(
     linkcheck = true,
     format = Documenter.HTML(
         assets = ["assets/favicon.ico"],
-        canonical = "https://docs.sciml.ai/DataInterpolations/stable/"
+        canonical = "https://docs.sciml.ai/NDInterpolations/stable/"
     ),
     pages = [
         "index.md",
@@ -17,4 +17,4 @@ makedocs(
     ]
 )
 
-deploydocs(repo = "github.com/SciML/NDInterpolations.jl"; push_preview = true)
+deploydocs(repo = "github.com/SciML/NDInterpolations.jl")
