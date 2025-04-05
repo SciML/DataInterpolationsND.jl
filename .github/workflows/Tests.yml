@@ -3,12 +3,12 @@ name: "Tests"
 on:
   pull_request:
     branches:
-      - master
+      - main
     paths-ignore:
       - 'docs/**'
   push:
     branches:
-      - master
+      - main
     paths-ignore:
       - 'docs/**'
   schedule:
