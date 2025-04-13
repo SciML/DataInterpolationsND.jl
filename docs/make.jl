@@ -13,6 +13,7 @@ makedocs(
         "index.md",
         "Usage" => "usage.md",
         "Interpolation Types" => "interpolation_types.md",
+        "Splines" => "splines.md",
         "API" => "api.md"
     ]
 )
