@@ -65,5 +65,5 @@ eval_grid!(out, interp)
 
 The interpolation types are given by the corresponding interpolation dimension type.
 
-- `LinearInterpolationDimension`: Linear interpolation in the sense of bilinear, trilinear interpolation etc.
-- `ConstantInterpolationDimension`: An interpolation with a constant value in each interval between `t` points. The Boolean option `left` (default `true`) can be used to indicate which side of the interval in which the input lies determines the output value.
+  - `LinearInterpolationDimension`: Linear interpolation in the sense of bilinear, trilinear interpolation etc.
+  - `ConstantInterpolationDimension`: An interpolation with a constant value in each interval between `t` points. The Boolean option `left` (default `true`) can be used to indicate which side of the interval in which the input lies determines the output value.
