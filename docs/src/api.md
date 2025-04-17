@@ -6,9 +6,10 @@
 NDInterpolation
 LinearInterpolationDimension
 ConstantInterpolationDimension
+BSplineInterpolationDimension
 ```
 
-## Utility functions
+## Multi-point evaluation
 
 ```@docs
 eval_unstructured

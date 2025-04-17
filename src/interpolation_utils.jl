@@ -2,8 +2,49 @@ trivial_range(i::Integer) = i:i
 
 Base.length(itp_dim::AbstractInterpolationDimension) = length(itp_dim.t)
 
-function validate_derivative_orders(derivative_orders::NTuple{N_in, <:Integer}) where {N_in}
+function validate_derivative_orders(
+        derivative_orders::NTuple{N_in, <:Integer},
+        ::NTuple{N_in, <:AbstractInterpolationDimension};
+        multi_point::Bool = false
+) where {N_in}
     @assert all(≥(0), derivative_orders) "Derivative orders must me non-negative."
+end
+
+function validate_derivative_orders(
+        derivative_orders::NTuple{N_in, <:Integer},
+        interp_dims::NTuple{N_in, <:BSplineInterpolationDimension};
+        multi_point::Bool = false
+) where {N_in}
+    @assert all(≥(0), derivative_orders) "Derivative orders must me non-negative."
+
+    if multi_point
+        @assert all(
+            i -> derivative_orders[i] ≤ interp_dims[i].max_derivative_order_eval, 1:N_in
+        ) "For BSpline interpolation, when using multi-point evaluation the derivative orders cannot be \
+        larger than the `max_derivative_order_eval` eval of of the `BSplineInterpolationDimension`. If you want \
+        to compute higher order multi-point derivatives, pass a larger `max_derivative_order_eval` to the \
+        `BSplineInterpolationDimension` constructor(s)."
+    end
+end
+
+function validate_t(t)
+    @assert t isa AbstractVector{<:Number} "t must be an AbstractVector with number like elements."
+    @assert all(>(0), diff(t)) "The elements of t must be sorted and unique."
+end
+
+function validate_size_u(
+        interp_dims::NTuple{N_in, <:AbstractInterpolationDimension},
+        u::AbstractArray
+) where {N_in}
+    @assert ntuple(i -> length(interp_dims[i]), N_in)==size(u)[1:N_in] "For the first N_in dimensions of u the length must match the t of the corresponding interpolation dimension."
+end
+
+function validate_size_u(
+        interp_dims::NTuple{N_in, <:BSplineInterpolationDimension},
+        u::AbstractArray
+) where {N_in}
+    expected_size = ntuple(dim_in -> get_n_basis_functions(interp_dims[dim_in]), N_in)
+    @assert expected_size==size(u)[1:N_in] "Expected the size of the first N_in dimensions of u to be $expected_size based on the BSplineInterpolation properties."
 end
 
 function get_ts(interp_dims::NTuple{
@@ -34,6 +75,9 @@ get_left(::AbstractInterpolationDimension) = false
 get_left(::LinearInterpolationDimension) = true
 
 get_idx_bounds(::AbstractInterpolationDimension) = (1, -1)
+function get_idx_bounds(itp_dim::BSplineInterpolationDimension)
+    (itp_dim.degree + 1, -itp_dim.degree - 1)
+end
 
 get_idx_shift(::AbstractInterpolationDimension) = 0
 get_idx_shift(::LinearInterpolationDimension) = -1
@@ -43,7 +87,11 @@ function get_idx(
         interp_dim::AbstractInterpolationDimension,
         t_eval::Number
 )
-    (; t) = interp_dim
+    t = if interp_dim isa BSplineInterpolationDimension
+        interp_dim.knots_all
+    else
+        interp_dim.t
+    end
     left = get_left(interp_dim)
     lb, ub_shift = get_idx_bounds(interp_dim)
     idx_shift = get_idx_shift(interp_dim)

@@ -2,6 +2,7 @@ module NDInterpolations
 using KernelAbstractions # Keep as dependency or make extension?
 using Adapt: @adapt_structure
 using EllipsisNotation
+using RecipesBase
 
 abstract type AbstractInterpolationDimension end
 
@@ -28,7 +29,7 @@ struct NDInterpolation{
         N_in = length(interp_dims)
         N_out = ndims(u) - N_in
         @assert N_out≥0 "The number of dimensions of u must be at least the number of interpolation dimensions."
-        @assert ntuple(i -> length(interp_dims[i]), N_in)==size(u)[1:N_in] "For the first N_in dimensions of u the length must match the t of the corresponding interpolation dimension."
+        validate_size_u(interp_dims, u)
         new{N_in, N_out, eltype(interp_dims), typeof(u)}(u, interp_dims)
     end
 end
@@ -37,8 +38,10 @@ end
 
 include("interpolation_dimensions.jl")
 include("interpolation_utils.jl")
+include("spline_utils.jl")
 include("interpolation_methods.jl")
 include("interpolation_parallel.jl")
+include("plot_rec.jl")
 
 # Multiple `t` arguments to tuple (can these 2 be done in 1?)
 function (interp::NDInterpolation)(t_args::Vararg{Number}; kwargs...)
@@ -56,10 +59,10 @@ function (interp::NDInterpolation{N_in})(
         t::Tuple{Vararg{Number, N_in}};
         derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
 ) where {N_in}
-    validate_derivative_orders(derivative_orders)
+    validate_derivative_orders(derivative_orders, interp.interp_dims)
     idx = get_idx(interp.interp_dims, t)
     @assert size(out)==size(interp.u)[(N_in + 1):end] "The size of out must match the size of the last N_out dimensions of u."
-    _interpolate!(out, interp, t, idx, derivative_orders)
+    _interpolate!(out, interp, t, idx, derivative_orders, nothing)
 end
 
 # Out of place single input evaluation
@@ -69,6 +72,7 @@ function (interp::NDInterpolation)(t::Tuple{Vararg{Number}}; kwargs...)
 end
 
 export NDInterpolation, LinearInterpolationDimension, ConstantInterpolationDimension,
+       BSplineInterpolationDimension,
        eval_unstructured, eval_unstructured!, eval_grid, eval_grid!
 
 end # module NDInterpolations

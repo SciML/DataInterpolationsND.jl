@@ -3,7 +3,8 @@ function _interpolate!(
         A::NDInterpolation{N_in, N_out, ID},
         t::Tuple{Vararg{Number, N_in}},
         idx::NTuple{N_in, <:Integer},
-        derivative_orders::NTuple{N_in, <:Integer}
+        derivative_orders::NTuple{N_in, <:Integer},
+        multi_point_index
 ) where {N_in, N_out, ID <: LinearInterpolationDimension}
     if iszero(N_out)
         out = zero(out)
@@ -46,13 +47,9 @@ function _interpolate!(
         A::NDInterpolation{N_in, N_out, ID},
         t::Tuple{Vararg{Number, N_in}},
         idx::NTuple{N_in, <:Integer},
-        derivative_orders::NTuple{N_in, <:Integer}
+        derivative_orders::NTuple{N_in, <:Integer},
+        multi_point_index
 ) where {N_in, N_out, ID <: ConstantInterpolationDimension}
-    if iszero(N_out)
-        out = zero(out)
-    else
-        out .= 0
-    end
     if any(>(0), derivative_orders)
         return if any(i -> !isempty(searchsorted(A.interp_dims[i].t, t[i])), 1:N_in)
             typed_nan(out)
@@ -67,5 +64,44 @@ function _interpolate!(
     else
         out .= A.u[idx...]
     end
+    return out
+end
+
+function _interpolate!(
+        out,
+        A::NDInterpolation{N_in, N_out, ID},
+        t::Tuple{Vararg{Number, N_in}},
+        idx::NTuple{N_in, <:Integer},
+        derivative_orders::NTuple{N_in, <:Integer},
+        multi_point_index
+) where {N_in, N_out, ID <: BSplineInterpolationDimension}
+    (; interp_dims) = A
+
+    if iszero(N_out)
+        out = zero(out)
+    else
+        out .= 0
+    end
+
+    degrees = ntuple(dim_in -> interp_dims[dim_in].degree, N_in)
+
+    basis_function_vals = ntuple(
+        dim_in -> get_basis_function_values(
+            interp_dims[dim_in], t[dim_in], idx[dim_in], derivative_orders[dim_in], multi_point_index, dim_in
+        ),
+        N_in
+    )
+
+    for I in CartesianIndices(ntuple(dim_in -> 1:(degrees[dim_in] + 1), N_in))
+        B_product = prod(dim_in -> basis_function_vals[dim_in][I[dim_in]], 1:N_in)
+        cp_index = ntuple(
+            dim_in -> idx[dim_in] + I[dim_in] - degrees[dim_in] - 1, N_in)
+        if iszero(N_out)
+            out += B_product * A.u[cp_index...]
+        else
+            out .+= B_product * view(A.u, cp_index..., ..)
+        end
+    end
+
     return out
 end
