@@ -64,7 +64,7 @@ using ForwardDiff
 
 u = reshape(u, 5, 10)
 itp = NDInterpolation(u, interp_dims)
-∂₁itp = (t1, t2) ->  ForwardDiff.derivative(t_ -> itp(t_, t2), t1)
+∂₁itp = (t1, t2) -> ForwardDiff.derivative(t_ -> itp(t_, t2), t1)
 out = ∂₁itp.(t_eval_1, t_eval_2')
 heatmap(out)
 ```
@@ -72,7 +72,7 @@ heatmap(out)
 ### Partial derivative w.r.t. first input (analytic)
 
 ```@example tutorial
-out = itp.(t_eval_1, t_eval_2'; derivative_orders = (1,0))
+out = itp.(t_eval_1, t_eval_2'; derivative_orders = (1, 0))
 heatmap(out)
 ```
 
@@ -100,5 +100,5 @@ u = reshape(u, 5, 10, 1)
 itp = NDInterpolation(u, interp_dims)
 out = zeros(100, 100, 1)
 eval_grid!(out, itp)
-heatmap(out[:,:,1])
+heatmap(out[:, :, 1])
 ```
