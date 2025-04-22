@@ -1,4 +1,4 @@
-using SafeTestsets
+using SafeTestsets, Pkg
 const GROUP = get(ENV, "GROUP", "All")
 
 function activate_gpu_env()
