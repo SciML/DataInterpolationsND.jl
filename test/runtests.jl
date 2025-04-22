@@ -8,12 +8,12 @@ function activate_gpu_env()
 end
 
 if GROUP == "All" || GROUP == "Core"
-  @safetestset "Interpolations" include("test_interpolations.jl")
-  @safetestset "Derivatives" include("test_derivatives.jl")
-  @safetestset "DataInterpolations" include("test_datainterpolations_comparison.jl")
+    @safetestset "Interpolations" include("test_interpolations.jl")
+    @safetestset "Derivatives" include("test_derivatives.jl")
+    @safetestset "DataInterpolations" include("test_datainterpolations_comparison.jl")
 elseif GROUP == "QA"
-  @safetestset "Aqua" include("aqua.jl")
+    @safetestset "Aqua" include("aqua.jl")
 elseif GROUP == "GPU"
-  activate_gpu_env()
-  # TODO: Add GPU tests
+    activate_gpu_env()
+    # TODO: Add GPU tests
 end

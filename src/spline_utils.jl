@@ -136,7 +136,9 @@ end
 )
     i, derivative_order_plus_1 = @index(Global, NTuple)
 
-    itp_dim.basis_function_eval[i, :, derivative_order_plus_1] .= get_basis_function_values(
+    itp_dim.basis_function_eval[i,
+        :,
+        derivative_order_plus_1] .= get_basis_function_values(
         itp_dim,
         itp_dim.t_eval[i],
         itp_dim.idx_eval[i],
