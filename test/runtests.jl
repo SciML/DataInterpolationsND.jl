@@ -1,6 +1,19 @@
 using SafeTestsets
+const GROUP = get(ENV, "GROUP", "All")
 
-@safetestset "Aqua" include("aqua.jl")
-@safetestset "Interpolations" include("test_interpolations.jl")
-@safetestset "Derivatives" include("test_derivatives.jl")
-@safetestset "DataInterpolations" include("test_datainterpolations_comparison.jl")
+function activate_gpu_env()
+    Pkg.activate("gpu")
+    Pkg.develop(PackageSpec(path = dirname(@__DIR__)))
+    Pkg.instantiate()
+end
+
+if GROUP == "All" || GROUP == "Core"
+  @safetestset "Interpolations" include("test_interpolations.jl")
+  @safetestset "Derivatives" include("test_derivatives.jl")
+  @safetestset "DataInterpolations" include("test_datainterpolations_comparison.jl")
+elseif GROUP == "QA"
+  @safetestset "Aqua" include("aqua.jl")
+elseif GROUP == "GPU"
+  activate_gpu_env()
+  # TODO: Add GPU tests
+end
