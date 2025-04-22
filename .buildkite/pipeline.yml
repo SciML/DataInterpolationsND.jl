@@ -1,0 +1,18 @@
+steps:
+  - label: "{{matrix}}"
+    matrix:
+      - "GPU"
+    env:
+      GROUP: "{{matrix}}"
+    plugins:
+      - JuliaCI/julia#v1:
+          version: "1"
+      - JuliaCI/julia-test#v1:
+          coverage: true
+    agents:
+      os: "linux"
+      queue: "juliaecosystem"
+      arch: "x86_64"
+    timeout_in_minutes: 60
+    # Don't run Buildkite if the commit message includes the text [skip tests]
+    if: build.message !~ /\[skip tests\]/

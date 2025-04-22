@@ -5,6 +5,7 @@
 
 [![codecov](https://codecov.io/gh/SciML/NDInterpolations.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/SciML/NDInterpolations.jl)
 [![CI](https://github.com/SciML/NDInterpolations.jl/actions/workflows/Tests.yml/badge.svg?branch=main)](https://github.com/SciML/NDInterpolations.jl/actions/workflows/Tests.yml)
+[![Build status](https://badge.buildkite.com/4c2c2a88154dffb521a9ca213f18486834e5edcfe329409bb2.svg)](https://buildkite.com/julialang/ndinterpolations-dot-jl)
 
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor%27s%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
