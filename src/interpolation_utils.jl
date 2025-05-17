@@ -52,7 +52,7 @@ function validate_size_u(
 end
 
 function validate_global_cache(
-        ::TrivialGlobalCache, ::NTuple{N_in, ID}, ::AbstractArray
+        ::EmptyCache, ::NTuple{N_in, ID}, ::AbstractArray
 ) where {N_in, ID}
     nothing
 end
@@ -80,9 +80,9 @@ function get_output_size(interp::NDInterpolation{N_in}) where {N_in}
     size(interp.u)[(N_in + 1):end]
 end
 
-make_zero(::T) where {T <: Number} = zero(T)
+make_zero!!(::T) where {T <: Number} = zero(T)
 
-function make_zero(v::T) where {T <: AbstractArray}
+function make_zero!!(v::T) where {T <: AbstractArray}
     v .= 0
     v
 end

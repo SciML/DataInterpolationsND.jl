@@ -6,7 +6,7 @@ function _interpolate!(
         derivative_orders::NTuple{N_in, <:Integer},
         multi_point_index
 ) where {N_in, N_out, ID <: LinearInterpolationDimension}
-    out = make_zero(out)
+    out = make_zero!!(out)
     any(>(1), derivative_orders) && return out
 
     tᵢ = ntuple(i -> A.interp_dims[i].t[idx[i]], N_in)
@@ -74,7 +74,7 @@ function _interpolate!(
 ) where {N_in, N_out, ID <: BSplineInterpolationDimension}
     (; interp_dims) = A
 
-    out = make_zero(out)
+    out = make_zero!!(out)
     degrees = ntuple(dim_in -> interp_dims[dim_in].degree, N_in)
     basis_function_vals = get_basis_function_values_all(
         A, t, idx, derivative_orders, multi_point_index
@@ -105,7 +105,7 @@ function _interpolate!(
 ) where {N_in, N_out, ID <: BSplineInterpolationDimension}
     (; interp_dims, global_cache) = A
 
-    out = make_zero(out)
+    out = make_zero!!(out)
     degrees = ntuple(dim_in -> interp_dims[dim_in].degree, N_in)
     basis_function_vals = get_basis_function_values_all(
         A, t, idx, derivative_orders, multi_point_index

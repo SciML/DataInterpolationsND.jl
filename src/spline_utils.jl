@@ -203,6 +203,6 @@ end
 
 Weights associated with the control points to define a NURBS geometry.
 """
-struct NURBSWeights{W <: AbstractArray} <: AbstractGlobalCache
+struct NURBSWeights{W <: AbstractArray} <: AbstractInterpolationCache
     weights::W
 end

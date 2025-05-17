@@ -1,10 +1,10 @@
-using NDInterpolations: AbstractInterpolationDimension, TrivialGlobalCache
+using NDInterpolations: AbstractInterpolationDimension, EmptyCache
 using NDInterpolations
 using Random
 
 function test_globally_constant(
         ID::Type{<:AbstractInterpolationDimension}; args1 = (), args2 = (), kwargs1 = (),
-        kwargs2 = (), global_cache = TrivialGlobalCache(), test_derivatives = true)
+        kwargs2 = (), global_cache = EmptyCache(), test_derivatives = true)
     t1 = [-3.14, 1.0, 3.0, 7.6, 12.8]
     t2 = [-2.71, 1.41, 12.76, 50.2, 120.0]
 

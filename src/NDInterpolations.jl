@@ -5,9 +5,9 @@ using EllipsisNotation
 using RecipesBase
 
 abstract type AbstractInterpolationDimension end
-abstract type AbstractGlobalCache end
+abstract type AbstractInterpolationCache end
 
-struct TrivialGlobalCache <: AbstractGlobalCache end
+struct EmptyCache <: AbstractInterpolationCache end
 
 """
     NDInterpolation(interp_dims, u)
@@ -24,7 +24,7 @@ the size of `u` along that dimension must match the length of `t` of the corresp
 struct NDInterpolation{
     N_in, N_out,
     ID <: AbstractInterpolationDimension,
-    gType <: AbstractGlobalCache,
+    gType <: AbstractInterpolationCache,
     uType <: AbstractArray
 }
     u::uType
@@ -46,7 +46,7 @@ struct NDInterpolation{
 end
 
 # Constructor with optional global cache
-function NDInterpolation(u, interp_dims; global_cache = TrivialGlobalCache())
+function NDInterpolation(u, interp_dims; global_cache = EmptyCache())
     NDInterpolation(u, interp_dims, global_cache)
 end
 
