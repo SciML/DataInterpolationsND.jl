@@ -29,8 +29,8 @@ struct NDInterpolation{
 }
     u::uType
     interp_dims::NTuple{N_in, ID}
-    global_cache::gType
-    function NDInterpolation(u, interp_dims, global_cache)
+    cache::gType
+    function NDInterpolation(u, interp_dims, cache)
         if interp_dims isa AbstractInterpolationDimension
             interp_dims = (interp_dims,)
         end
@@ -38,16 +38,16 @@ struct NDInterpolation{
         N_out = ndims(u) - N_in
         @assert N_out≥0 "The number of dimensions of u must be at least the number of interpolation dimensions."
         validate_size_u(interp_dims, u)
-        validate_global_cache(global_cache, interp_dims, u)
-        new{N_in, N_out, eltype(interp_dims), typeof(global_cache), typeof(u)}(
-            u, interp_dims, global_cache
+        validate_cache(cache, interp_dims, u)
+        new{N_in, N_out, eltype(interp_dims), typeof(cache), typeof(u)}(
+            u, interp_dims, cache
         )
     end
 end
 
 # Constructor with optional global cache
-function NDInterpolation(u, interp_dims; global_cache = EmptyCache())
-    NDInterpolation(u, interp_dims, global_cache)
+function NDInterpolation(u, interp_dims; cache = EmptyCache())
+    NDInterpolation(u, interp_dims, cache)
 end
 
 @adapt_structure NDInterpolation

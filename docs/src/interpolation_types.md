@@ -59,7 +59,7 @@ heatmap(out)
 
 ```@example tutorial
 weights = rand(11, 11)
-interp = NDInterpolation(u_bspline, interp_dims; global_cache = NURBSWeights(weights))
+interp = NDInterpolation(u_bspline, interp_dims; cache = NURBSWeights(weights))
 eval_grid!(out, interp)
 heatmap(out)
 ```

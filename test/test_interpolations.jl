@@ -4,7 +4,7 @@ using Random
 
 function test_globally_constant(
         ID::Type{<:AbstractInterpolationDimension}; args1 = (), args2 = (), kwargs1 = (),
-        kwargs2 = (), global_cache = EmptyCache(), test_derivatives = true)
+        kwargs2 = (), cache = EmptyCache(), test_derivatives = true)
     t1 = [-3.14, 1.0, 3.0, 7.6, 12.8]
     t2 = [-2.71, 1.41, 12.76, 50.2, 120.0]
 
@@ -20,7 +20,7 @@ function test_globally_constant(
         ID(t2, args2...; t_eval = t2, kwargs2...)
     )
 
-    itp = NDInterpolation(u, itp_dims; global_cache)
+    itp = NDInterpolation(u, itp_dims; cache)
     @test all(x -> isapprox(x, 2.0; atol = 1e-10), eval_grid(itp))
     if test_derivatives
         @test all(
@@ -103,7 +103,7 @@ end
         BSplineInterpolationDimension; args1 = (3,), args2 = (1,),
         kwargs1 = (:max_derivative_order_eval => 1,),
         kwargs2 = (:max_derivative_order_eval => 1,),
-        global_cache = NURBSWeights(rand(7, 5)),
+        cache = NURBSWeights(rand(7, 5)),
         test_derivatives = false
     )
 
@@ -130,10 +130,10 @@ end
     # Weights
     weights = ones(9)
     weights[2:2:end] ./= sqrt(2)
-    global_cache = NURBSWeights(weights)
+    cache = NURBSWeights(weights)
 
     itp_dim = BSplineInterpolationDimension(t, 2; multiplicities, t_eval)
-    itp = NDInterpolation(u, itp_dim; global_cache)
+    itp = NDInterpolation(u, itp_dim; cache)
 
     out = eval_grid(itp)
     points_on_circle = eachrow(out)

@@ -103,7 +103,7 @@ function _interpolate!(
         derivative_orders::NTuple{N_in, <:Integer},
         multi_point_index
 ) where {N_in, N_out, ID <: BSplineInterpolationDimension}
-    (; interp_dims, global_cache) = A
+    (; interp_dims, cache) = A
 
     out = make_zero!!(out)
     degrees = ntuple(dim_in -> interp_dims[dim_in].degree, N_in)
@@ -117,7 +117,7 @@ function _interpolate!(
         B_product = prod(dim_in -> basis_function_vals[dim_in][I[dim_in]], 1:N_in)
         cp_index = ntuple(
             dim_in -> idx[dim_in] + I[dim_in] - degrees[dim_in] - 1, N_in)
-        weight = global_cache.weights[cp_index...]
+        weight = cache.weights[cp_index...]
         product = weight * B_product
         denom += product
         if iszero(N_out)

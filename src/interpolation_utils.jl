@@ -26,7 +26,7 @@ function validate_derivative_orders(
         `BSplineInterpolationDimension` constructor(s)."
     end
 
-    if A.global_cache isa NURBSWeights
+    if A.cache isa NURBSWeights
         @assert all(==(0), derivative_orders) "Currently partial derivatives of NURBS are not supported."
     end
 end
@@ -51,13 +51,13 @@ function validate_size_u(
     @assert expected_size==size(u)[1:N_in] "Expected the size of the first N_in dimensions of u to be $expected_size based on the BSplineInterpolation properties."
 end
 
-function validate_global_cache(
+function validate_cache(
         ::EmptyCache, ::NTuple{N_in, ID}, ::AbstractArray
 ) where {N_in, ID}
     nothing
 end
 
-function validate_global_cache(
+function validate_cache(
         nurbs_weights::NURBSWeights,
         ::NTuple{N_in, BSplineInterpolationDimension},
         u::AbstractArray
@@ -66,7 +66,7 @@ function validate_global_cache(
     @assert size(nurbs_weights.weights)==size_expected "The size of the weights array must match the length of the first N_in dimensions of u ($size_expected)."
 end
 
-function validate_global_cache(
+function validate_cache(
         ::gType, ::NTuple{N_in, ID}, ::AbstractArray) where {gType, N_in, ID}
     @error("Interpolation dimension type $ID is not compatible with global cache type $gType.")
 end
