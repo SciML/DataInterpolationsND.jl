@@ -4,17 +4,26 @@ version = "0.1.0"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+Atomix = "a9b6321e-bd34-4604-b9c9-b65b8de01458"
 EllipsisNotation = "da5c29d0-fa7d-589e-88eb-ea29b0a81949"
 KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 
+[weakdeps]
+LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
+
+[extensions]
+NDInterpolationsLinearMapsExt = "LinearMaps"
+
 [compat]
 Adapt = "4.3.0"
 Aqua = "0.8"
+Atomix = "1.1.1"
 DataInterpolations = "8"
 EllipsisNotation = "1.8.0"
 ForwardDiff = "0"
 KernelAbstractions = "0.9.34"
+LinearMaps = "3.11.4"
 Random = "1"
 RecipesBase = "1.3.4"
 SafeTestsets = "0.1"

@@ -87,19 +87,29 @@ function make_zero!!(v::T) where {T <: AbstractArray}
     v
 end
 
+function output_type(interp::NDInterpolation)
+    promote_type(eltype(interp.u), map(itp_dim -> eltype(itp_dim.t), interp.interp_dims)...)
+end
+
+function output_type(
+        interp::NDInterpolation{N_in},
+        t::NTuple{N_in, >:Number}
+) where {N_in}
+    promote_type(output_type(interp), map(typeof, t)...)
+end
+
 function make_out(
         interp::NDInterpolation{N_in, 0},
         t::NTuple{N_in, >:Number}
 ) where {N_in}
-    zero(promote_type(eltype(interp.u), map(typeof, t)...))
+    zero(output_type(interp, t))
 end
 
 function make_out(
         interp::NDInterpolation{N_in},
         t::NTuple{N_in, >:Number}
 ) where {N_in}
-    similar(
-        interp.u, promote_type(eltype(interp.u), map(eltype, t)...), get_output_size(interp))
+    similar(interp.u, ouput_type(interp, t))
 end
 
 get_left(::AbstractInterpolationDimension) = false

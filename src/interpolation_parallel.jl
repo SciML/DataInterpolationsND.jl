@@ -85,34 +85,37 @@ in place.
 function eval_grid!(
         out::AbstractArray,
         interp::NDInterpolation{N_in};
-        derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
+        derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in),
+        adjoint::Bool = false
 ) where {N_in}
     validate_derivative_orders(derivative_orders, interp; multi_point = true)
     backend = get_backend(out)
     @assert all(i -> size(out, i) == length(interp.interp_dims[i].t_eval), N_in) "For the first N_in dimensions of out the length must match the t_eval of the corresponding interpolation dimension."
     @assert size(out)[(N_in + 1):end]==get_output_size(interp) "The size of the last N_out dimensions of out must be the same as the output size of the interpolation."
-    eval_kernel(backend)(
-        out,
-        interp,
-        derivative_orders,
-        true,
-        ndrange = size(out)[1:N_in]
-    )
+    if adjoint
+        eval_kernel_adjoint(backend)(
+            interp,
+            out,
+            derivative_orders,
+            true,
+            ndrange = size(out)[1:N_in]
+        )
+    else
+        eval_kernel(backend)(
+            out,
+            interp,
+            derivative_orders,
+            true,
+            ndrange = size(out)[1:N_in]
+        )
+    end
     synchronize(backend)
     return out
 end
 
-@kernel function eval_kernel(
-        out,
-        @Const(A),
-        derivative_orders,
-        eval_grid
-)
-    N_in = length(A.interp_dims)
-    N_out = ndims(A.u) - N_in
-
-    k = @index(Global, NTuple)
-
+function get_eval_params(
+        A::NDInterpolation{N_in, N_out}, eval_grid::Bool, k::NTuple{N_in, Int}
+) where {N_in, N_out}
     if eval_grid
         t_eval = ntuple(i -> A.interp_dims[i].t_eval[k[i]], N_in)
         idx_eval = ntuple(i -> A.interp_dims[i].idx_eval[k[i]], N_in)
@@ -121,6 +124,18 @@ end
         idx_eval = ntuple(i -> A.interp_dims[i].idx_eval[only(k)], N_in)
     end
 
+    return N_out, t_eval, idx_eval
+end
+
+@kernel function eval_kernel(
+        out,
+        @Const(A),
+        derivative_orders,
+        eval_grid
+)
+    k = @index(Global, NTuple)
+    N_out, t_eval, idx_eval = get_eval_params(A, eval_grid, k)
+
     if iszero(N_out)
         out[k...] = _interpolate!(
             make_out(A, t_eval), A, t_eval, idx_eval, derivative_orders, k)
@@ -128,5 +143,23 @@ end
         _interpolate!(
             view(out, k..., ..),
             A, t_eval, idx_eval, derivative_orders, k)
+    end
+end
+
+@kernel function eval_kernel_adjoint(
+        A,
+        @Const(out),
+        derivative_orders,
+        eval_grid
+)
+    k = @index(Global, NTuple)
+    N_out, t_eval, idx_eval = get_eval_params(A, eval_grid, k)
+
+    if iszero(N_out)
+        _interpolate_adjoint!(
+            A, out[k...], t_eval, idx_eval, derivative_orders, k)
+    else
+        _interpolate_adjoint!(
+            A, view(out, k..., ..), t_eval, idx_eval, derivative_orders, k)
     end
 end

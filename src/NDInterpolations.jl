@@ -1,5 +1,6 @@
 module NDInterpolations
-using KernelAbstractions # Keep as dependency or make extension?
+import Atomix
+using KernelAbstractions
 using Adapt: @adapt_structure
 using EllipsisNotation
 using RecipesBase
@@ -56,6 +57,7 @@ include("interpolation_dimensions.jl")
 include("spline_utils.jl")
 include("interpolation_utils.jl")
 include("interpolation_methods.jl")
+include("interpolation_methods_adjoint.jl")
 include("interpolation_parallel.jl")
 include("plot_rec.jl")
 
