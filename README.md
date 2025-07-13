@@ -62,6 +62,8 @@ out = zeros(100, 100, 2)
 eval_grid!(out, interp)
 ```
 
+This is particularly efficient for evaluating the interpolation for the same `t_eval` multiple times with different values for `u`, because the indices (and basis functions if applicable) for the `t_eval` are cached during the interpolation dimension construction.
+
 ## Available interpolations
 
 The interpolation types are given by the corresponding interpolation dimension type.
