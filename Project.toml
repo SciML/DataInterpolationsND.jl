@@ -1,5 +1,5 @@
-name = "NDInterpolations"
-uuid = "36393168-6312-4ad2-a3cd-ea1fc14934ec"
+name = "DataInterpolationsND"
+uuid = "4f1ef021-621a-47a5-ac8a-95402a2d1ea8"
 version = "0.1.0"
 
 [deps]

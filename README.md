@@ -1,27 +1,27 @@
-# NDInterpolations.jl
+# DataInterpolationsND.jl
 
 [![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
 [![Global Docs](https://img.shields.io/badge/docs-SciML-blue.svg)](https://docs.sciml.ai/NDInterpolation/stable/)
 
-[![codecov](https://codecov.io/gh/SciML/NDInterpolations.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/SciML/NDInterpolations.jl)
-[![CI](https://github.com/SciML/NDInterpolations.jl/actions/workflows/Tests.yml/badge.svg?branch=main)](https://github.com/SciML/NDInterpolations.jl/actions/workflows/Tests.yml)
-[![Build status](https://badge.buildkite.com/4c2c2a88154dffb521a9ca213f18486834e5edcfe329409bb2.svg)](https://buildkite.com/julialang/ndinterpolations-dot-jl)
+[![codecov](https://codecov.io/gh/SciML/DataInterpolationsND.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/SciML/DataInterpolationsND.jl)
+[![CI](https://github.com/SciML/DataInterpolationsND.jl/actions/workflows/Tests.yml/badge.svg?branch=main)](https://github.com/SciML/DataInterpolationsND.jl/actions/workflows/Tests.yml)
+[![Build status](https://badge.buildkite.com/4c2c2a88154dffb521a9ca213f18486834e5edcfe329409bb2.svg)](https://buildkite.com/julialang/DataInterpolationsND-dot-jl)
 
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor%27s%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
-NDInterpolations.jl is a library for interpolating arbitrarily high dimensional array data. The domain of this interpolation is a (hyper)rectangle. Support is included for efficient evaluation at multiple points in the domain through [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl).
+DataInterpolationsND.jl is a library for interpolating arbitrarily high dimensional array data. The domain of this interpolation is a (hyper)rectangle. Support is included for efficient evaluation at multiple points in the domain through [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl).
 
 For one dimensional interpolation see also [DataInterpolations.jl](https://github.com/SciML/DataInterpolations.jl).
 
-NDInterpolations.jl is not to be confused with [Interpolations.jl](https://github.com/JuliaMath/Interpolations.jl), a well established interpolation package that is currently much more feature rich than NDInterpolations.jl. We hope to justify the existance of NDInterpolations.jl through its use of the KernelAbstractions and its planned integration with the SciML ecosystem.
+DataInterpolationsND.jl is similar in functionality to [Interpolations.jl](https://github.com/JuliaMath/Interpolations.jl), a well established interpolation package that is currently much more feature rich than DataInterpolationsND.jl. We hope to justify the existence of DataInterpolationsND.jl through its use of the KernelAbstractions and its planned integration with the SciML ecosystem.
 
 ## API
 
 An `NDInterpolation` is defined by a tuple of interpolation dimensions and the data `u` to interpolate.
 
 ```julia
-using NDInterpolations
+using DataInterpolationsND
 
 t1 = cumsum(rand(5))
 t2 = cumsum(rand(7))

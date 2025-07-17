@@ -1,5 +1,5 @@
-using NDInterpolations: AbstractInterpolationDimension, EmptyCache
-using NDInterpolations
+using DataInterpolationsND: AbstractInterpolationDimension, EmptyCache
+using DataInterpolationsND
 using Random
 
 function test_globally_constant(

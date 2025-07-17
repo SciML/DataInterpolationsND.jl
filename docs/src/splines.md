@@ -3,7 +3,7 @@
 To be expanded. A nice thing to demonstrate is the plotting of the basis functions:
 
 ```@example tutorial
-using NDInterpolations
+using DataInterpolationsND
 using Plots
 
 itp_dim = BSplineInterpolationDimension(

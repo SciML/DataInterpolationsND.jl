@@ -1,6 +1,6 @@
 # Index
 
-NDInterpolations.jl is a library for interpolating arbitrarily high dimensional array data. The domain of this interpolation is a (hyper)rectangle. Support is included for efficient evaluation at multiple points in the domain through [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl).
+DataInteprolationsND.jl is a library for interpolating arbitrarily high dimensional array data. The domain of this interpolation is a (hyper)rectangle. Support is included for efficient evaluation at multiple points in the domain through [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl).
 
 For one dimensional interpolation see also [DataInterpolations.jl](https://github.com/SciML/DataInterpolations.jl).
 
@@ -9,7 +9,7 @@ For one dimensional interpolation see also [DataInterpolations.jl](https://githu
 An `NDInterpolation` is defined by a tuple of interpolation dimensions and the data `u` to interpolate.
 
 ```julia
-using NDInterpolations
+using DataInterpolationsND
 
 t1 = cumsum(rand(5))
 t2 = cumsum(rand(7))

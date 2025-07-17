@@ -1,10 +1,10 @@
-using NDInterpolations
+using DataInterpolationsND
 using DataInterpolations
 
 isapprox_or_nan(v1, v2) = (v1 ≈ v2) || (all(isnan, v1) && all(isnan, v2))
 
 function interpolation_comparison(
-        itp_dim_type::Type{<:NDInterpolations.AbstractInterpolationDimension},
+        itp_dim_type::Type{<:DataInterpolationsND.AbstractInterpolationDimension},
         itp_type::Type{<:DataInterpolations.AbstractInterpolation}
 )
     t = [0.0, 0.2, 0.5, 0.7, 0.9, 1.1]
@@ -31,7 +31,7 @@ function interpolation_comparison(
 end
 
 function interpolation_derivative_comparison(
-        itp_dim_type::Type{<:NDInterpolations.AbstractInterpolationDimension},
+        itp_dim_type::Type{<:DataInterpolationsND.AbstractInterpolationDimension},
         itp_type::Type{<:DataInterpolations.AbstractInterpolation}
 )
     t = [0.0, 0.2, 0.5, 0.7, 0.9, 1.1]

@@ -1,4 +1,4 @@
-using NDInterpolations
+using DataInterpolationsND
 using ForwardDiff
 using Random
 

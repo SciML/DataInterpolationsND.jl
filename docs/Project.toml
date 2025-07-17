@@ -1,7 +1,7 @@
 [deps]
+DataInterpolationsND = "4f1ef021-621a-47a5-ac8a-95402a2d1ea8"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-NDInterpolations = "36393168-6312-4ad2-a3cd-ea1fc14934ec"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"

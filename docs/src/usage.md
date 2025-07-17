@@ -3,7 +3,7 @@
 ### Setup
 
 ```@example tutorial
-using NDInterpolations
+using DataInterpolationsND
 using Random
 Random.seed!(1)
 

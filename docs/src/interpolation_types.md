@@ -1,7 +1,7 @@
 # Interpolation types
 
 ```@example tutorial
-using NDInterpolations
+using DataInterpolationsND
 using Random
 using Plots
 Random.seed!(2)

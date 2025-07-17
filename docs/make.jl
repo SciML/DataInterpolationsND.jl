@@ -1,13 +1,13 @@
-using Documenter, NDInterpolations
+using Documenter, DataInterpolationsND
 
 makedocs(
-    sitename = "NDInterpolations.jl",
+    sitename = "DataInterpolationsND.jl",
     clean = true,
     doctest = false,
     linkcheck = true,
     format = Documenter.HTML(
         assets = ["assets/favicon.ico"],
-        canonical = "https://docs.sciml.ai/NDInterpolations/stable/"
+        canonical = "https://docs.sciml.ai/DataInterpolationsND/stable/"
     ),
     pages = [
         "index.md",
@@ -18,4 +18,4 @@ makedocs(
     ]
 )
 
-deploydocs(repo = "github.com/SciML/NDInterpolations.jl")
+deploydocs(repo = "github.com/SciML/DataInterpolationsND.jl")

@@ -1,6 +1,6 @@
 using Aqua
-using NDInterpolations
+using DataInterpolationsND
 
 @testset "Aqua" begin
-    Aqua.test_all(NDInterpolations)
+    Aqua.test_all(DataInterpolationsND)
 end

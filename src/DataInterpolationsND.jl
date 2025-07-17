@@ -1,4 +1,4 @@
-module NDInterpolations
+module DataInterpolationsND
 using KernelAbstractions # Keep as dependency or make extension?
 using Adapt: @adapt_structure
 using EllipsisNotation
@@ -91,4 +91,4 @@ export NDInterpolation, LinearInterpolationDimension, ConstantInterpolationDimen
        BSplineInterpolationDimension, NURBSWeights,
        eval_unstructured, eval_unstructured!, eval_grid, eval_grid!
 
-end # module NDInterpolations
+end # module DataInterpolationsND
