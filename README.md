@@ -14,6 +14,8 @@ NDInterpolations.jl is a library for interpolating arbitrarily high dimensional 
 
 For one dimensional interpolation see also [DataInterpolations.jl](https://github.com/SciML/DataInterpolations.jl).
 
+NDInterpolations.jl is not to be confused with [Interpolations.jl](https://github.com/JuliaMath/Interpolations.jl), a well established interpolation package that is currently much more feature rich than NDInterpolations.jl. We hope to justify the existance of NDInterpolations.jl through its use of the KernelAbstractions and its planned integration with the SciML ecosystem.
+
 ## API
 
 An `NDInterpolation` is defined by a tuple of interpolation dimensions and the data `u` to interpolate.
