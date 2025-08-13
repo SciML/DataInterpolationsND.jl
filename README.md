@@ -1,7 +1,7 @@
 # DataInterpolationsND.jl
 
 [![Join the chat at https://julialang.zulipchat.com #sciml-bridged](https://img.shields.io/static/v1?label=Zulip&message=chat&color=9558b2&labelColor=389826)](https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged)
-[![Global Docs](https://img.shields.io/badge/docs-SciML-blue.svg)](https://docs.sciml.ai/NDInterpolation/stable/)
+[![Global Docs](https://img.shields.io/badge/docs-SciML-blue.svg)](https://docs.sciml.ai/NDInterpolations/stable/)
 
 [![codecov](https://codecov.io/gh/SciML/DataInterpolationsND.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/SciML/DataInterpolationsND.jl)
 [![CI](https://github.com/SciML/DataInterpolationsND.jl/actions/workflows/Tests.yml/badge.svg?branch=main)](https://github.com/SciML/DataInterpolationsND.jl/actions/workflows/Tests.yml)
