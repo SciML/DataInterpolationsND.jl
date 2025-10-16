@@ -1,4 +1,11 @@
 """
+    NoInterpolationDimension
+
+A dimension that does not perform interpolation.
+"""
+struct NoInterpolationDimension <: AbstractInterpolationDimension end
+
+"""
     LinearInterpolationDimension(t; t_eval = similar(t, 0))
 
 Interpolation dimension for linear interpolation between the data points.

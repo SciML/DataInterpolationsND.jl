@@ -1,15 +1,15 @@
 function _interpolate!(
         out,
-        A::NDInterpolation{N_in, N_out},
-        ts::Tuple{Vararg{Number, N_in}},
-        idx::NTuple{N_in, <:Integer},
-        derivative_orders::NTuple{N_in, <:Integer},
+        A::NDInterpolation{N, N_out},
+        ts::Tuple{Vararg{Number}},
+        idx::NTuple{N, <:Integer},
+        derivative_orders::NTuple{N, <:Integer},
         multi_point_index
-) where {N_in, N_out}
+) where {N,N_out}
     (; interp_dims, cache, u) = A
-    check_derivative_orders(interp_dims, derivative_orders) || return out
+    check_derivative_order(interp_dims, derivative_orders) || return out
     if isnothing(multi_point_index)
-        multi_point_index = ntuple(_ -> 1, N_in)
+        multi_point_index = map(_ -> 1, interp_dims)
     end
     out = make_zero!!(out)
     denom = zero(eltype(ts))
@@ -29,7 +29,7 @@ function _interpolate!(
         if iszero(N_out)
             out += product * u[J...]
         else
-            out .+= product * view(u, J..., ..)
+            out .+= product .* view(u, J...)
         end
     end
 
@@ -44,11 +44,14 @@ function _interpolate!(
     return out
 end
 
-check_derivative_orders(dims, derivative_orders) = true
-# TODO:
-# any(>(1), derivative_orders) && return out
-# if any(>(0), derivative_orders)
-#     return if any(i -> !isempty(searchsorted(A.interp_dims[i].t, t[i])), 1:N_in)
+check_derivative_order(dims::Tuple, derivative_orders::Tuple) =
+    all(map(check_derivative_order, dims, derivative_orders))
+check_derivative_order(::LinearInterpolationDimension, d_o) = d_o <= 1 
+check_derivative_order(::ConstantInterpolationDimension, d_o) = d_0 <= 0
+check_derivative_order(::AbstractInterpolationDimension, d_o) = true
+# TODO how to handle this
+# if derivative_order > 0
+#     return if any(i -> !isempty(searchsorted(A.interp_dims[i].t, t[i]))
 #         typed_nan(out)
 #     else
 #         out
@@ -61,7 +64,8 @@ function prepare(d::LinearInterpolationDimension, derivative_order, multi_point_
     t_vol_inv = inv(t₂ - t₁)
     return (; t, t₁, t₂, t_vol_inv, derivative_order)
 end
-prepare(::ConstantInterpolationDimension, derivative_orders, multi_point_index, t, i) = nothing
+prepare(::ConstantInterpolationDimension, derivative_orders, multi_point_index, t, i) = (;)
+prepare(::NoInterpolationDimension, derivative_orders, multi_point_index, t, i) = (;)
 function prepare(d::BSplineInterpolationDimension, derivative_order, multi_point_index, t::Number, i::Integer)
     # TODO the dim_in arg isn't really needed, so drop it. Currently just 0
     basis_function_values = get_basis_function_values(d, t, i, derivative_order, multi_point_index, 0)
@@ -70,6 +74,7 @@ end
 
 iteration_space(::LinearInterpolationDimension) = (false, true)
 iteration_space(::ConstantInterpolationDimension) = 1
+iteration_space(::NoInterpolationDimension) = 1
 iteration_space(d::BSplineInterpolationDimension) = 1:d.degree + 1
 
 function scale(::LinearInterpolationDimension, prep::NamedTuple, right_point::Bool)
@@ -80,9 +85,11 @@ function scale(::LinearInterpolationDimension, prep::NamedTuple, right_point::Bo
         iszero(derivative_order) ? t₂ - t : -one(t)
     end * t_vol_inv
 end
-scale(::ConstantInterpolationDimension, prep, i) = 1
+scale(::ConstantInterpolationDimension, prep::NamedTuple, i) = 1
+scale(::NoInterpolationDimension, prep::NamedTuple, i) = 1
 scale(::BSplineInterpolationDimension, prep::NamedTuple, i) = prep.basis_function_values[i]
 
 index(::LinearInterpolationDimension, t, idx, i) = idx + i
 index(d::ConstantInterpolationDimension, t, idx, i) = t >= d.t[end] ? length(d.t) : idx[i]
+index(::NoInterpolationDimension, t, idx, i) = Colon()
 index(d::BSplineInterpolationDimension, t, idx, i) = idx + i - d.degree - 1
