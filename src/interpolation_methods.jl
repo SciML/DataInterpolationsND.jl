@@ -1,40 +1,39 @@
 function _interpolate!(
         out,
-        A::NDInterpolation{N_in, N_out, <:NURBSWeights},
+        A::NDInterpolation{N_in, N_out},
         ts::Tuple{Vararg{Number, N_in}},
         idx::NTuple{N_in, <:Integer},
         derivative_orders::NTuple{N_in, <:Integer},
         multi_point_index
 ) where {N_in, N_out}
-    (; interp_dims, cache) = A
-    check_derivative_orders(interp_dims, derivative_orders) || return
+    (; interp_dims, cache, u) = A
+    check_derivative_orders(interp_dims, derivative_orders) || return out
     if isnothing(multi_point_index)
         multi_point_index = ntuple(_ -> 1, N_in)
     end
     out = make_zero!!(out)
-    denom = zero(eltype(t))
+    denom = zero(eltype(ts))
     # Setup
     space = map(iteration_space, interp_dims)
     preparations = map(prepare, interp_dims, derivative_orders, multi_point_index, ts, idx)
 
     for I in Iterators.product(space...)
-        scaling = map(scale, A.interp_dims, preparations, I)
-        J = map(index, A.interp_dims, ts, idx, I)
-        product = if isnothing(cache)
-            scaling
+        scaling = map(scale, interp_dims, preparations, I)
+        J = map(index, interp_dims, ts, idx, I)
+        product = if cache isa EmptyCache
+            prod(scaling)
         else
-            weight = cache.weights[J...]
-            product = weight * scaling
+            product = cache.weights[J...] * prod(scaling)
             denom += product
         end
         if iszero(N_out)
-            out += product * A.u[J...]
+            out += product * u[J...]
         else
-            out .+= product * view(A.u, J..., ..)
+            out .+= product * view(u, J..., ..)
         end
     end
 
-    if !isnothing(cache)
+    if !(cache isa EmptyCache)
         if iszero(N_out)
             out /= denom
         else
@@ -45,7 +44,7 @@ function _interpolate!(
     return out
 end
 
-check_derivative_orders(dims, derivative_orders) = false
+check_derivative_orders(dims, derivative_orders) = true
 # TODO:
 # any(>(1), derivative_orders) && return out
 # if any(>(0), derivative_orders)
