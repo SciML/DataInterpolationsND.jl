@@ -22,13 +22,13 @@ the size of `u` along that dimension must match the length of `t` of the corresp
   - `u`: The array to be interpolated.
 """
 struct NDInterpolation{
-    N_in, N_out,
-    ID <: AbstractInterpolationDimension,
+    N_in, 
+    N_out,
     gType <: AbstractInterpolationCache,
     uType <: AbstractArray
 }
     u::uType
-    interp_dims::NTuple{N_in, ID}
+    interp_dims::D
     cache::gType
     function NDInterpolation(u, interp_dims, cache)
         if interp_dims isa AbstractInterpolationDimension
@@ -39,7 +39,7 @@ struct NDInterpolation{
         @assert N_out≥0 "The number of dimensions of u must be at least the number of interpolation dimensions."
         validate_size_u(interp_dims, u)
         validate_cache(cache, interp_dims, u)
-        new{N_in, N_out, eltype(interp_dims), typeof(cache), typeof(u)}(
+        new{N_in, N_out, typeof(cache), typeof(u)}(
             u, interp_dims, cache
         )
     end

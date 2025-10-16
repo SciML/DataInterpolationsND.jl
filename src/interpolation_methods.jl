@@ -1,40 +1,60 @@
 function _interpolate!(
         out,
-        A::NDInterpolation{N_in, N_out, ID},
+        A::NDInterpolation{N_in, N_out, <:NURBSWeights},
         ts::Tuple{Vararg{Number, N_in}},
         idx::NTuple{N_in, <:Integer},
         derivative_orders::NTuple{N_in, <:Integer},
         multi_point_index
-) where {N_in, N_out, ID}
+) where {N_in, N_out}
+    (; interp_dims, cache) = A
+    check_derivative_orders(interp_dims, derivative_orders) || return
     if isnothing(multi_point_index)
         multi_point_index = ntuple(_ -> 1, N_in)
     end
     out = make_zero!!(out)
-    # TODO:
-    # any(>(1), derivative_orders) && return out
-    # if any(>(0), derivative_orders)
-    #     return if any(i -> !isempty(searchsorted(A.interp_dims[i].t, t[i])), 1:N_in)
-    #         typed_nan(out)
-    #     else
-    #         out
-    #     end
-    # end
+    denom = zero(eltype(t))
     # Setup
-    space = map(iteration_space, A.interp_dims)
-    preparations = map(prepare, A.interp_dims, derivative_orders, multi_point_index, ts, idx)
-    # Loop over interpolation space
+    space = map(iteration_space, interp_dims)
+    preparations = map(prepare, interp_dims, derivative_orders, multi_point_index, ts, idx)
+
     for I in Iterators.product(space...)
         scaling = map(scale, A.interp_dims, preparations, I)
-        c = prod(scaling) 
         J = map(index, A.interp_dims, ts, idx, I)
-        if iszero(N_out)
-            out += c * A.u[J...]
+        product = if isnothing(cache)
+            scaling
         else
-            @. out += c * A.u[J...]
+            weight = cache.weights[J...]
+            product = weight * scaling
+            denom += product
+        end
+        if iszero(N_out)
+            out += product * A.u[J...]
+        else
+            out .+= product * view(A.u, J..., ..)
         end
     end
+
+    if !isnothing(cache)
+        if iszero(N_out)
+            out /= denom
+        else
+            out ./= denom
+        end
+    end
+
     return out
 end
+
+check_derivative_orders(dims, derivative_orders) = false
+# TODO:
+# any(>(1), derivative_orders) && return out
+# if any(>(0), derivative_orders)
+#     return if any(i -> !isempty(searchsorted(A.interp_dims[i].t, t[i])), 1:N_in)
+#         typed_nan(out)
+#     else
+#         out
+#     end
+# end
 
 function prepare(d::LinearInterpolationDimension, derivative_order, multi_point_index, t, i)
     t₁ = d.t[i]
@@ -67,46 +87,3 @@ scale(::BSplineInterpolationDimension, prep::NamedTuple, i) = prep.basis_functio
 index(::LinearInterpolationDimension, t, idx, i) = idx + i
 index(d::ConstantInterpolationDimension, t, idx, i) = t >= d.t[end] ? length(d.t) : idx[i]
 index(d::BSplineInterpolationDimension, t, idx, i) = idx + i - d.degree - 1
-
-# NURBS evaluation
-# TODO: generalise as above
-function _interpolate!(
-        out,
-        A::NDInterpolation{N_in, N_out, ID, <:NURBSWeights},
-        t::Tuple{Vararg{Number, N_in}},
-        idx::NTuple{N_in, <:Integer},
-        derivative_orders::NTuple{N_in, <:Integer},
-        multi_point_index
-) where {N_in, N_out, ID <: BSplineInterpolationDimension}
-    (; interp_dims, cache) = A
-
-    out = make_zero!!(out)
-    degrees = ntuple(dim_in -> interp_dims[dim_in].degree, N_in)
-    basis_function_vals = get_basis_function_values_all(
-        A, t, idx, derivative_orders, multi_point_index
-    )
-
-    denom = zero(eltype(t))
-
-    for I in CartesianIndices(ntuple(dim_in -> 1:(degrees[dim_in] + 1), N_in))
-        B_product = prod(dim_in -> basis_function_vals[dim_in][I[dim_in]], 1:N_in)
-        cp_index = ntuple(
-            dim_in -> idx[dim_in] + I[dim_in] - degrees[dim_in] - 1, N_in)
-        weight = cache.weights[cp_index...]
-        product = weight * B_product
-        denom += product
-        if iszero(N_out)
-            out += product * A.u[cp_index...]
-        else
-            out .+= product * view(A.u, cp_index..., ..)
-        end
-    end
-
-    if iszero(N_out)
-        out /= denom
-    else
-        out ./= denom
-    end
-
-    return out
-end
