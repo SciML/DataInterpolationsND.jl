@@ -48,15 +48,17 @@ function test_globally_constant(
     end
 end
 
-function test_analytic(itp::NDInterpolation{N_in}, f) where {N_in}
+function test_analytic(itp::NDInterpolation{<:Any,N_in}, f) where {N_in}
+    used_interp_dims = DataInterpolationsND._remove(NoInterpolationDimension, itp.interp_dims...)
     # Evaluation in data points
-    ts = ntuple(dim_in -> itp.interp_dims[dim_in].t, N_in)
+    ts = map(d -> d.t, used_interp_dims)
     for t in Iterators.product(ts...)
         @test itp(t) ≈ f(t...)
     end
 
     # Evaluation between data points
     ts_ = ntuple(dim_in -> ts[dim_in][1:(end - 1)] + diff(ts[dim_in]) / 2, N_in)
+    t = first(Iterators.product(ts_...))
     for t in Iterators.product(ts_...)
         @test itp(t) ≈ f(t...)
     end
@@ -66,7 +68,6 @@ end
     test_globally_constant(LinearInterpolationDimension)
 
     f(t1, t2) = 3.0 + 2.3t1 - 4.7t2
-
     Random.seed!(1)
     t1 = cumsum(rand(10))
     t2 = cumsum(rand(10))

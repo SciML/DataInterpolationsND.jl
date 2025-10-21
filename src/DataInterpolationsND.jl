@@ -84,7 +84,7 @@ function (interp::NDInterpolation{N,N_in,N_out})(
         t::Tuple{Vararg{Number, N}};
         derivative_orders::NTuple{N, <:Integer} = ntuple(_ -> 0, N)
 ) where {N,N_in,N_out}
-    validate_derivative_orders(derivative_orders, interp)
+    validate_derivative_order(derivative_orders, interp)
     idx = get_idx(interp.interp_dims, t)
     @assert size(out)==size(interp.u)[(N_in + 1):end] "The size of out must match the size of the last N_out dimensions of u."
     _interpolate!(out, interp, t, idx, derivative_orders, nothing)
@@ -97,7 +97,7 @@ function (interp::NDInterpolation)(t::Tuple{Vararg{Number}}; kwargs...)
 end
 
 export NDInterpolation, LinearInterpolationDimension, ConstantInterpolationDimension,
-       BSplineInterpolationDimension, NURBSWeights,
+       BSplineInterpolationDimension, NURBSWeights, NoInterpolationDimension,
        eval_unstructured, eval_unstructured!, eval_grid, eval_grid!
 
 end # module DataInterpolationsND

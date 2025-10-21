@@ -1,5 +1,5 @@
 """
-    NoInterpolationDimension
+    NoInterpolationDimensio
 
 A dimension that does not perform interpolation.
 """
@@ -164,15 +164,10 @@ function BSplineInterpolationDimension(
     synchronize(backend)
 
     idx_eval = similar(t_eval, Int)
-    basis_function_eval = similar(
-        t_eval,
-        typeof(inv(one(eltype(t))) * inv(one(eltype(t_eval)))),
-        (
-            length(t_eval),
-            degree + 1,
-            max_derivative_order_eval + 1
-        )
-    )
+    s = (length(t_eval), degree + 1, max_derivative_order_eval + 1)
+    @show s
+    T = typeof(inv(one(eltype(t))) * inv(one(eltype(t_eval))))
+    basis_function_eval = similar(t_eval, T, s)
     itp_dim = BSplineInterpolationDimension(
         t, knots_all, t_eval, idx_eval, degree, max_derivative_order_eval,
         basis_function_eval, multiplicities)

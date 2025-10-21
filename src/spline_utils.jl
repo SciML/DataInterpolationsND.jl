@@ -111,6 +111,7 @@ function get_basis_function_values(
         derivative_order::Integer,
         multi_point_index::Integer,
 )
+    @show size(itp_dim.basis_function_eval)
     view(itp_dim.basis_function_eval, multi_point_index, :, derivative_order + 1)
 end
 
