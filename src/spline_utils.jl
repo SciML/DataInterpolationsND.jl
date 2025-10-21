@@ -61,7 +61,6 @@ function get_basis_function_values(
         idx::Integer,
         derivative_order::Integer,
         multi_point_index::Nothing,
-        dim_in::Integer
 )
     (; degree, knots_all) = itp_dim
     T = promote_type(typeof(t), eltype(itp_dim.basis_function_eval))
@@ -92,7 +91,6 @@ function get_basis_function_values(
 
     basis_function_values[1:degree_plus_1]
 end
-
 # Get the basis function values for one point in an
 # unstructured multi point evaluation (given by the scalar multi point index)
 function get_basis_function_values(
@@ -101,12 +99,9 @@ function get_basis_function_values(
         idx::Integer,
         derivative_order::Integer,
         multi_point_index::Number,
-        dim_in::Integer
 )
-    view(itp_dim.basis_function_eval,
-        multi_point_index, :, derivative_order + 1)
+    view(itp_dim.basis_function_eval, multi_point_index, :, derivative_order + 1)
 end
-
 # Get the basis function values for one point in a
 # grid evaluation (given by the tuple multi point index)
 function get_basis_function_values(
@@ -114,27 +109,9 @@ function get_basis_function_values(
         t::Number,
         idx::Integer,
         derivative_order::Integer,
-        multi_point_index::NTuple{N_in, <:Integer},
-        dim_in::Integer
-) where {N_in}
-    view(itp_dim.basis_function_eval,
-        multi_point_index[dim_in], :, derivative_order + 1)
-end
-
-# Get all basis function values to evaluate a BSpline interpolation in t
-function get_basis_function_values_all(
-        A::NDInterpolation{N_in, N_out, <:BSplineInterpolationDimension},
-        t::Tuple{Vararg{Number, N_in}},
-        idx::NTuple{N_in, <:Integer},
-        derivative_orders::NTuple{N_in, <:Integer},
-        multi_point_index
-) where {N_in, N_out}
-    ntuple(
-        dim_in -> get_basis_function_values(
-            A.interp_dims[dim_in], t[dim_in], idx[dim_in], derivative_orders[dim_in], multi_point_index, dim_in
-        ),
-        N_in
-    )
+        multi_point_index::Integer,
+)
+    view(itp_dim.basis_function_eval, multi_point_index, :, derivative_order + 1)
 end
 
 function set_basis_function_eval!(itp_dim::BSplineInterpolationDimension)::Nothing
@@ -152,15 +129,12 @@ end
 )
     i, derivative_order_plus_1 = @index(Global, NTuple)
 
-    itp_dim.basis_function_eval[i,
-    :,
-    derivative_order_plus_1] .= get_basis_function_values(
+    itp_dim.basis_function_eval[i, :, derivative_order_plus_1] .= get_basis_function_values(
         itp_dim,
         itp_dim.t_eval[i],
         itp_dim.idx_eval[i],
         derivative_order_plus_1 - 1,
         nothing,
-        0
     )
 end
 

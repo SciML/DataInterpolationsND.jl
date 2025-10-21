@@ -1,10 +1,14 @@
-using DataInterpolationsND: AbstractInterpolationDimension, EmptyCache
 using DataInterpolationsND
 using Random
+using DataInterpolationsND: AbstractInterpolationDimension, EmptyCache
+
 
 function test_globally_constant(
-        ID::Type{<:AbstractInterpolationDimension}; args1 = (), args2 = (), kwargs1 = (),
-        kwargs2 = (), cache = EmptyCache(), test_derivatives = true)
+    ID::Type{<:AbstractInterpolationDimension}; args1 = (), args2 = (), kwargs1 = (),
+    kwargs2 = (), 
+    cache = EmptyCache(), 
+    test_derivatives = true
+)
     t1 = [-3.14, 1.0, 3.0, 7.6, 12.8]
     t2 = [-2.71, 1.41, 12.76, 50.2, 120.0]
 
@@ -77,11 +81,14 @@ end
 end
 
 @testset "BSpline Interpolation" begin
-    test_globally_constant(
-        BSplineInterpolationDimension, args1 = (2,), args2 = (3,),
-        kwargs1 = (:max_derivative_order_eval => 1,),
-        kwargs2 = (:max_derivative_order_eval => 1,)
-    )
+    ID = BSplineInterpolationDimension
+    args1 = (2,)
+    args2 = (3,)
+    kwargs1 = (:max_derivative_order_eval => 1,)
+    kwargs2 = (:max_derivative_order_eval => 1,)
+    cache = EmptyCache() 
+    test_derivatives = true
+    test_globally_constant(ID; args1, args2, kwargs1, kwargs2, cache, test_derivatives)
 
     f(t1, t2, t3) = t1^2 + t2^2 + t3^2
 
@@ -99,13 +106,14 @@ end
 @testset "NURBS Interpolation" begin
     Random.seed!(10)
 
-    test_globally_constant(
-        BSplineInterpolationDimension; args1 = (3,), args2 = (1,),
-        kwargs1 = (:max_derivative_order_eval => 1,),
-        kwargs2 = (:max_derivative_order_eval => 1,),
-        cache = NURBSWeights(rand(7, 5)),
-        test_derivatives = false
-    )
+    ID = BSplineInterpolationDimension
+    args1 = (3,)
+    args2 = (1,)
+    kwargs1 = (:max_derivative_order_eval => 1,)
+    kwargs2 = (:max_derivative_order_eval => 1,)
+    cache = NURBSWeights(rand(7, 5))
+    test_derivatives = false
+    test_globally_constant(ID; args1, args2, kwargs1, kwargs2, cache, test_derivatives)
 
     ## Circle representation
     # Knots

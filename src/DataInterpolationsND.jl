@@ -22,6 +22,7 @@ the size of `u` along that dimension must match the length of `t` of the corresp
   - `u`: The array to be interpolated.
 """
 struct NDInterpolation{
+    N,
     N_in, 
     N_out,
     gType <: AbstractInterpolationCache,
@@ -33,15 +34,20 @@ struct NDInterpolation{
     cache::gType
     function NDInterpolation(u::AbstractArray{<:Any,N}, interp_dims, cache) where N
         interp_dims = _add_trailing_interp_dims(interp_dims, Val{N}())
-        N_out = count(map(d -> d isa NoInterpolationDimension, interp_dims))
+        N_in = _count_interpolating_dims(interp_dims)
+        N_out = _count_noninterpolating_dims(interp_dims)
         @assert N_out≥0 "The number of dimensions of u must be at least the number of interpolation dimensions."
         validate_size_u(interp_dims, u)
         validate_cache(cache, interp_dims, u)
-        new{N, N_out, typeof(cache), typeof(interp_dims), typeof(u)}(
+        new{N, N_in, N_out, typeof(cache), typeof(interp_dims), typeof(u)}(
             u, interp_dims, cache
         )
     end
 end
+
+# TODO probably not type-stable
+_count_interpolating_dims(interp_dims) = count(map(d -> !(d isa NoInterpolationDimension), interp_dims))
+_count_noninterpolating_dims(interp_dims) = count(map(d -> d isa NoInterpolationDimension, interp_dims))
 
 _add_trailing_interp_dims(dim::AbstractInterpolationDimension, n) = 
     _add_trailing_interp_dims((dim,), n)
@@ -73,11 +79,11 @@ function (interp::NDInterpolation)(
 end
 
 # In place single input evaluation
-function (interp::NDInterpolation{N_in})(
-        out::Union{Number, AbstractArray{<:Number}},
-        t::Tuple{Vararg{Number, N_in}};
-        derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
-) where {N_in}
+function (interp::NDInterpolation{N,N_in,N_out})(
+        out::Union{Number, AbstractArray{<:Number, N_out}},
+        t::Tuple{Vararg{Number, N}};
+        derivative_orders::NTuple{N, <:Integer} = ntuple(_ -> 0, N)
+) where {N,N_in,N_out}
     validate_derivative_orders(derivative_orders, interp)
     idx = get_idx(interp.interp_dims, t)
     @assert size(out)==size(interp.u)[(N_in + 1):end] "The size of out must match the size of the last N_out dimensions of u."

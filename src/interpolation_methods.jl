@@ -1,11 +1,11 @@
 function _interpolate!(
         out,
-        A::NDInterpolation{N, N_out},
+        A::NDInterpolation{N,N_in,N_out},
         ts::Tuple{Vararg{Number}},
         idx::NTuple{N, <:Integer},
         derivative_orders::NTuple{N, <:Integer},
         multi_point_index
-) where {N,N_out}
+) where {N,N_in,N_out}
     (; interp_dims, cache, u) = A
     check_derivative_order(interp_dims, derivative_orders) || return out
     if isnothing(multi_point_index)
@@ -27,6 +27,7 @@ function _interpolate!(
             denom += product
         end
         if iszero(N_out)
+            @assert all(map(j -> j isa Integer, J))
             out += product * u[J...]
         else
             out .+= product .* view(u, J...)
@@ -66,9 +67,11 @@ function prepare(d::LinearInterpolationDimension, derivative_order, multi_point_
 end
 prepare(::ConstantInterpolationDimension, derivative_orders, multi_point_index, t, i) = (;)
 prepare(::NoInterpolationDimension, derivative_orders, multi_point_index, t, i) = (;)
-function prepare(d::BSplineInterpolationDimension, derivative_order, multi_point_index, t::Number, i::Integer)
+function prepare(d::BSplineInterpolationDimension, derivative_order, multi_point_index, t, i)
     # TODO the dim_in arg isn't really needed, so drop it. Currently just 0
-    basis_function_values = get_basis_function_values(d, t, i, derivative_order, multi_point_index, 0)
+    basis_function_values = get_basis_function_values(
+        d, t, i, derivative_order, multi_point_index
+    )
     return (; basis_function_values)
 end
 
