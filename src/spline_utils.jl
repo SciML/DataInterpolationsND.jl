@@ -98,21 +98,10 @@ function get_basis_function_values(
         t::Number,
         idx::Integer,
         derivative_order::Integer,
-        multi_point_index::Number,
-)
-    view(itp_dim.basis_function_eval, multi_point_index, :, derivative_order + 1)
-end
-# Get the basis function values for one point in a
-# grid evaluation (given by the tuple multi point index)
-function get_basis_function_values(
-        itp_dim::BSplineInterpolationDimension,
-        t::Number,
-        idx::Integer,
-        derivative_order::Integer,
         multi_point_index::Integer,
 )
-    @show size(itp_dim.basis_function_eval)
-    view(itp_dim.basis_function_eval, multi_point_index, :, derivative_order + 1)
+    view(itp_dim.basis_function_eval,
+        multi_point_index, :, derivative_order + 1)
 end
 
 function set_basis_function_eval!(itp_dim::BSplineInterpolationDimension)::Nothing
