@@ -45,7 +45,7 @@ struct NDInterpolation{
     end
 end
 
-# TODO probably not type-stable
+# TODO probably not type-stable (this needs to compile away completely)
 _count_interpolating_dims(interp_dims) = count(map(d -> !(d isa NoInterpolationDimension), interp_dims))
 _count_noninterpolating_dims(interp_dims) = count(map(d -> d isa NoInterpolationDimension, interp_dims))
 
@@ -72,24 +72,21 @@ include("plot_rec.jl")
 function (interp::NDInterpolation)(t_args::Vararg{Number}; kwargs...)
     interp(t_args; kwargs...)
 end
-
 function (interp::NDInterpolation)(
         out::AbstractArray, t_args::Vararg{Number}; kwargs...)
     interp(out, t_args; kwargs...)
 end
-
 # In place single input evaluation
 function (interp::NDInterpolation{N,N_in,N_out})(
         out::Union{Number, AbstractArray{<:Number, N_out}},
         t::Tuple{Vararg{Number, N}};
         derivative_orders::NTuple{N, <:Integer} = ntuple(_ -> 0, N)
 ) where {N,N_in,N_out}
+    validate_size_u(interp, out)
     validate_derivative_order(derivative_orders, interp)
     idx = get_idx(interp.interp_dims, t)
-    @assert size(out)==size(interp.u)[(N_in + 1):end] "The size of out must match the size of the last N_out dimensions of u."
-    _interpolate!(out, interp, t, idx, derivative_orders, nothing)
+    return _interpolate!(out, interp, t, idx, derivative_orders, nothing)
 end
-
 # Out of place single input evaluation
 function (interp::NDInterpolation)(t::Tuple{Vararg{Number}}; kwargs...)
     out = make_out(interp, t)

@@ -60,7 +60,7 @@ function get_basis_function_values(
         t::Number,
         idx::Integer,
         derivative_order::Integer,
-        multi_point_index::Nothing,
+        multi_point_index::Union{Nothing,Colon}, # TODO why both
 )
     (; degree, knots_all) = itp_dim
     T = promote_type(typeof(t), eltype(itp_dim.basis_function_eval))

@@ -79,6 +79,13 @@ end
     u = f.(t1, t2')
     itp = NDInterpolation(u, itp_dims)
     test_analytic(itp, f)
+
+    itp_dims = (
+        NoInterpolationDimension(),
+        LinearInterpolationDimension(t2; t_eval = t2 ./ 2)
+    )
+    itp = NDInterpolation(u, itp_dims)
+    eval_grid(itp)
 end
 
 @testset "BSpline Interpolation" begin
@@ -148,4 +155,20 @@ end
     points_on_circle = eachrow(out)
     @test allunique(points_on_circle[2:end])
     @test all(point -> point[1]^2 + point[2]^2 ≈ 1, points_on_circle)
+end
+
+@testset "Mixed Interpolation" begin
+
+    t1 = cumsum(rand(3))
+    t2 = cumsum(rand(4))
+    t3 = collect(0:(π / 2):(2π))
+    t_eval = collect(range(0, 2π, length = 100))
+    u = zeros(3, 4, 5)
+    itp_dims = (
+        NoInterpolationDimension(),
+        LinearInterpolationDimension(t2; t_eval = t2 ./ 2),
+        BSplineInterpolationDimension(t3, 2; multiplicities, t_eval),
+    )
+    itp = NDInterpolation(u, itp_dims)
+    eval_grid(itp)
 end

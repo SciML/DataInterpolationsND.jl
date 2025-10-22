@@ -1,20 +1,22 @@
 function _interpolate!(
-        out,
+        out::Union{Number,AbstractArray{<:Any,N_out}},
         A::NDInterpolation{N,N_in,N_out},
-        ts::Tuple{Vararg{Number}},
-        idx::NTuple{N, <:Integer},
-        derivative_orders::NTuple{N, <:Integer},
+        ts::Tuple,
+        idx::Tuple,
+        derivative_orders::Tuple,
         multi_point_index
 ) where {N,N_in,N_out}
     (; interp_dims, cache, u) = A
+
     check_derivative_order(interp_dims, derivative_orders) || return out
     if isnothing(multi_point_index)
         multi_point_index = map(_ -> 1, interp_dims)
     end
     out = make_zero!!(out)
-    denom = zero(eltype(ts))
+    denom = zero(eltype(_remove(Nothing, ts...)))
     # Setup
     space = map(iteration_space, interp_dims)
+    @show prepare interp_dims derivative_orders multi_point_index ts idx
     preparations = map(prepare, interp_dims, derivative_orders, multi_point_index, ts, idx)
 
     for I in Iterators.product(space...)
@@ -23,6 +25,7 @@ function _interpolate!(
         product = if cache isa EmptyCache
             prod(scaling)
         else
+            @show J size(cache.weights)
             product = cache.weights[J...] * prod(scaling)
             denom += product
         end

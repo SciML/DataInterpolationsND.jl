@@ -45,21 +45,26 @@ function validate_t(t)
     @assert all(>(0), diff(t)) "The elements of t must be sorted and unique."
 end
 
-validate_size_u(interp_dims::NTuple, u) = map(validate_size_u, interp_dims, axes(u))
-function validate_size_u(interp_dim::AbstractInterpolationDimension, ax)
+validate_size_u(::NDInterpolation{N,N,0}, u::Number) where N = nothing
+validate_size_u(interp::NDInterpolation, u::AbstractArray) = validate_size_u(interp.interp_dims, axes(u))
+validate_size_u(interp_dims::Tuple, u::AbstractArray) = map(validate_size_u, interp_dims, axes(u))
+validate_size_u(interp_dim::NoInterpolationDimension, ax::AbstractRange) = nothing
+function validate_size_u(interp_dim::AbstractInterpolationDimension, ax::AbstractRange)
     @assert length(interp_dim) == length(ax) "For the first N_in dimensions of u the length must match the t of the corresponding interpolation dimension."
 end
-function validate_size_u(interp_dim::BSplineInterpolationDimension, ax)
+function validate_size_u(interp_dim::BSplineInterpolationDimension, ax::AbstractRange)
     expected_size = get_n_basis_functions(interp_dim)
-    @assert expected_size == length(ax) "Expected the size of the first N_in dimensions of u to be $expected_size based on the BSplineInterpolation properties."
+    @assert expected_size == length(ax) "Expected the size to be $expected_size based on the BSplineInterpolation properties, got $(length(ax))."
 end
 
-function validate_cache(cache, dims::NTuple, u)
+function validate_cache(cache::AbstractInterpolationCache, dims::Tuple, u::AbstractArray)
     ntuple(length(dims)) do n
         validate_cache(cache, dims[n], u, n)
     end
 end
 validate_cache(::EmptyCache, ::AbstractInterpolationDimension, ::AbstractArray, ::Int) = nothing
+validate_cache(::EmptyCache, ::NoInterpolationDimension, ::AbstractArray, ::Int) = nothing
+validate_cache(::AbstractInterpolationCache, ::NoInterpolationDimension, ::AbstractArray, ::Int) = nothing
 function validate_cache(
         nurbs_weights::NURBSWeights,
         ::BSplineInterpolationDimension,
@@ -75,9 +80,9 @@ end
 
 function get_output_size(interp::NDInterpolation)
     I = map(interp.interp_dims, axes(interp.u)) do d, ax
-        d isa NoInterpolationDimension ? Colon() : first(ax)
+        d isa NoInterpolationDimension ? length(ax) : nothing
     end
-    return size(view(interp.u, I...))
+    return _remove(Nothing, I...)
 end
 
 make_zero!!(::T) where {T <: Number} = zero(T)
@@ -131,9 +136,9 @@ function get_idx(
         clamp(searchsortedlast(t, t_eval) + idx_shift, lb, ub)
     end
 end
-function get_idx(interp_dims::NTuple{N_in}, t::Tuple{Vararg{Number, N_in}}) where N_in
-    used_interp_dims = _remove(NoInterpolationDimension, interp_dims...)
-    map(get_idx, used_interp_dims, t)
+get_idx(::NoInterpolationDimension, t_eval::Number) = nothing
+function get_idx(interp_dims::NTuple{N}, t::Tuple{Vararg{Number, N}}) where N
+    map(get_idx, interp_dims, t)
 end
 
 function set_eval_idx!(interp_dim::AbstractInterpolationDimension)
@@ -147,7 +152,7 @@ function set_eval_idx!(interp_dim::AbstractInterpolationDimension)
     synchronize(backend)
 end
 
-@kernel function set_idx_kernel(interp_dim)
+@kernel function set_idx_kernel(interp_dim::AbstractInterpolationDimension)
     i = @index(Global, Linear)
     interp_dim.idx_eval[i] = get_idx(interp_dim, interp_dim.t_eval[i])
 end
@@ -162,3 +167,31 @@ end
 
 typed_nan(::T) where {T <: Integer} = zero(T)
 typed_nan(::T) where {T <: AbstractFloat} = T(NaN)
+
+
+# Get the KernelAbstractions nd_range, over interpolated dimensions
+function get_ndrange(interp::NDInterpolation)
+    I = map(interp.interp_dims) do d
+        d isa NoInterpolationDimension ? nothing : length(d.t_eval)
+    end
+    return _remove(Nothing, I...)
+end
+
+# Remove objects of type T from splatted args (taken from DimensionalData.jl) 
+Base.@assume_effects :foldable _remove(::Type{T}, x, xs...) where T = (x, _remove(T, xs...)...)
+Base.@assume_effects :foldable _remove(::Type{T}, ::T, xs...) where T = _remove(T, xs...)
+Base.@assume_effects :foldable _remove(::Type) = ()
+
+# Insert x in `out` where `m isa T`, otherwise output one of in for each m
+# out must exactly match the number of ms or this will error
+# If `!(m isa T)` take from `in`
+Base.@assume_effects :foldable _insertat(::Type{T}, x, in::Tuple{<:Any,Vararg}, out::Tuple, m, ms...) where T = 
+    _insertat(T, x, Base.tail(in), (out..., first(in)), ms...)  
+# If `m isa T` insert `x`
+Base.@assume_effects :foldable _insertat(::Type{T}, x, in::Tuple{<:Any,Vararg}, out::Tuple, m::T, ms...) where T =
+    _insertat(T, x, in, (out..., x), ms...)  
+# `in` can be empty if all trailing ms are T
+Base.@assume_effects :foldable _insertat(::Type{T}, x, in::Tuple, out::Tuple, m::T, ms::T...) where T =
+    _insertat(T, x, in, (out..., x), ms...)  
+# `in` can also be empty if there are no remaining `m`
+Base.@assume_effects :foldable _insertat(::Type, x, in::Tuple{}, out::Tuple) = out
