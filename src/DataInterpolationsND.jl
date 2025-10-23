@@ -72,10 +72,12 @@ include("plot_rec.jl")
 function (interp::NDInterpolation)(t_args::Vararg{Number}; kwargs...)
     interp(t_args; kwargs...)
 end
+
 function (interp::NDInterpolation)(
         out::AbstractArray, t_args::Vararg{Number}; kwargs...)
     interp(out, t_args; kwargs...)
 end
+
 # In place single input evaluation
 function (interp::NDInterpolation{N,N_in,N_out})(
         out::Union{Number, AbstractArray{<:Number, N_out}},
@@ -87,6 +89,7 @@ function (interp::NDInterpolation{N,N_in,N_out})(
     idx = get_idx(interp.interp_dims, t)
     return _interpolate!(out, interp, t, idx, derivative_orders, nothing)
 end
+
 # Out of place single input evaluation
 function (interp::NDInterpolation)(t::Tuple{Vararg{Number}}; kwargs...)
     out = make_out(interp, t)

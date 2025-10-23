@@ -164,8 +164,8 @@ function BSplineInterpolationDimension(
     synchronize(backend)
 
     idx_eval = similar(t_eval, Int)
-    s = (length(t_eval), degree + 1, max_derivative_order_eval + 1)
     T = typeof(inv(one(eltype(t))) * inv(one(eltype(t_eval))))
+    s = (length(t_eval), degree + 1, max_derivative_order_eval + 1)
     basis_function_eval = similar(t_eval, T, s)
     itp_dim = BSplineInterpolationDimension(
         t, knots_all, t_eval, idx_eval, degree, max_derivative_order_eval,

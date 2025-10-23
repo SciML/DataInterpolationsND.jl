@@ -60,7 +60,7 @@ function get_basis_function_values(
         t::Number,
         idx::Integer,
         derivative_order::Integer,
-        multi_point_index::Union{Nothing,Colon}, # TODO why both
+        multi_point_index::Nothing,
 )
     (; degree, knots_all) = itp_dim
     T = promote_type(typeof(t), eltype(itp_dim.basis_function_eval))
@@ -91,6 +91,7 @@ function get_basis_function_values(
 
     basis_function_values[1:degree_plus_1]
 end
+
 # Get the basis function values for one point in an
 # unstructured multi point evaluation (given by the scalar multi point index)
 function get_basis_function_values(

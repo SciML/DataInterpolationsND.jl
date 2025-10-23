@@ -116,11 +116,10 @@ end
 
 @kernel function eval_kernel(
         out,
-        A::NDInterpolation{N, N_in, N_out},
+        A, # @Const(A), TODO: somehow this now hits a bug in KernelAbstractions where elsize is not defined for Const
         derivative_orders,
-) where {N, N_in, N_out}
-    # This kernel is only over interpolated dimensions, we need 
-    # to insert fillers to match the number of dimensions in the data
+) 
+    N_out = length(keep(NoInterpolationDimension, A.interp_dims))
     I = @index(Global, NTuple)
     k = insertat(NoInterpolationDimension, Colon(), I, A.interp_dims) 
 
@@ -128,11 +127,12 @@ end
     idx_eval = map(get_idx_eval, A.interp_dims, k)
 
     if iszero(N_out)
-        dest = make_out(A, t_eval)
-        out[I...] = _interpolate!(dest, A, t_eval, idx_eval, derivative_orders, k)
+        out[k...] = _interpolate!(
+            make_out(A, t_eval), A, t_eval, idx_eval, derivative_orders, k)
     else
-        dest = view(out, k...)
-        _interpolate!(dest, A, t_eval, idx_eval, derivative_orders, k)
+        _interpolate!(
+            view(out, k...),
+            A, t_eval, idx_eval, derivative_orders, k)
     end
 end
 

@@ -16,10 +16,10 @@ function _interpolate!(
     out = make_zero!!(out)
     denom = zero(eltype(u))
     # Setup
-    space = map(iteration_space, interp_dims)
+    stencils = map(stencil, interp_dims)
     preparations = map(prepare, interp_dims, derivative_orders, multi_point_index, ts, idx)
 
-    for I in Iterators.product(space...)
+    for I in Iterators.product(stencils...)
         scaling = map(scale, interp_dims, preparations, I)
         J = map(index, interp_dims, ts, idx, I)
         if cache isa EmptyCache
@@ -86,10 +86,10 @@ function prepare(d::BSplineInterpolationDimension, derivative_order, multi_point
     return (; basis_function_values)
 end
 
-iteration_space(::LinearInterpolationDimension) = (false, true)
-iteration_space(::ConstantInterpolationDimension) = 1
-iteration_space(::NoInterpolationDimension) = 1
-iteration_space(d::BSplineInterpolationDimension) = 1:d.degree + 1
+stencil(::LinearInterpolationDimension) = (false, true)
+stencil(::ConstantInterpolationDimension) = 1
+stencil(::NoInterpolationDimension) = 1
+stencil(d::BSplineInterpolationDimension) = 1:d.degree + 1
 
 function scale(::LinearInterpolationDimension, prep::NamedTuple, right_point::Bool)
     (; t, t₁, t₂, t_vol_inv, derivative_order) = prep

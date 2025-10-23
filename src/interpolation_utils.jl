@@ -2,7 +2,9 @@ trivial_range(i::Integer) = i:i
 
 Base.length(itp_dim::AbstractInterpolationDimension) = length(itp_dim.t)
 
-function validate_derivative_order(derivative_orders::NTuple, A::NDInterpolation;
+function validate_derivative_order(
+    derivative_orders::NTuple, 
+    A::NDInterpolation;
     multi_point::Bool = false
 )
     map(derivative_orders, A.interp_dims) do d_o, d
@@ -39,7 +41,6 @@ validate_derivative_order_by_cache(::NURBSWeights, derivative_order)  =
 validate_derivative_order_by_cache(::Any, derivative_order) =
     @assert derivative_order >= 0 "Derivative orders must me non-negative."
 
-
 function validate_t(t)
     @assert t isa AbstractVector{<:Number} "t must be an AbstractVector with number like elements."
     @assert all(>(0), diff(t)) "The elements of t must be sorted and unique."
@@ -52,12 +53,18 @@ validate_size_u(interp_dim::NoInterpolationDimension, ax::AbstractRange) = nothi
 function validate_size_u(interp_dim::AbstractInterpolationDimension, ax::AbstractRange)
     @assert length(interp_dim) == length(ax) "For the first N_in dimensions of u the length must match the t of the corresponding interpolation dimension."
 end
-function validate_size_u(interp_dim::BSplineInterpolationDimension, ax::AbstractRange)
+
+function validate_size_u(
+    interp_dim::BSplineInterpolationDimension, 
+    ax::AbstractRange
+)
     expected_size = get_n_basis_functions(interp_dim)
     @assert expected_size == length(ax) "Expected the size to be $expected_size based on the BSplineInterpolation properties, got $(length(ax))."
 end
 
-function validate_cache(cache::AbstractInterpolationCache, dims::Tuple, u::AbstractArray)
+function validate_cache(
+    cache::AbstractInterpolationCache, dims::Tuple, u::AbstractArray
+)
     ntuple(length(dims)) do n
         validate_cache(cache, dims[n], u, n)
     end
@@ -74,7 +81,9 @@ function validate_cache(
     size_expected = size(u, n)
     @assert size(nurbs_weights.weights, n) == size_expected "The size of the weights array must match the length of the first N_in dimensions of u ($size_expected), got $(size(nurbs_weights.weights, n))."
 end
-function validate_cache(::gType, ::ID, ::AbstractArray, ::Int) where {gType,ID<:AbstractInterpolationDimension}
+
+function validate_cache(
+        ::gType, ::ID, ::AbstractArray, ::Int) where {gType,ID<:AbstractInterpolationDimension}
     @error("Interpolation dimension type $ID is not compatible with global cache type $gType.")
 end
 
@@ -97,6 +106,7 @@ function grid_size(interp::NDInterpolation)
 end
 
 make_zero!!(::T) where {T <: Number} = zero(T)
+
 function make_zero!!(v::T) where {T <: AbstractArray}
     v .= 0
     v
@@ -147,12 +157,18 @@ function get_idx(
         clamp(searchsortedlast(t, t_eval) + idx_shift, lb, ub)
     end
 end
+
 get_idx(::NoInterpolationDimension, t_eval::Number) = nothing
-function get_idx(interp_dims::NTuple{N}, t::Tuple{Vararg{Number, N}}) where N
+function get_idx(
+        interp_dims::NTuple{N},
+        t::Tuple{Vararg{Number, N}};
+) where {N}
     map(get_idx, interp_dims, t)
 end
 
-function set_eval_idx!(interp_dim::AbstractInterpolationDimension)
+function set_eval_idx!(
+        interp_dim::AbstractInterpolationDimension,
+)
     backend = get_backend(interp_dim.t)
     if !isempty(interp_dim.t_eval)
         set_idx_kernel(backend)(
@@ -163,7 +179,9 @@ function set_eval_idx!(interp_dim::AbstractInterpolationDimension)
     synchronize(backend)
 end
 
-@kernel function set_idx_kernel(interp_dim::AbstractInterpolationDimension)
+@kernel function set_idx_kernel(
+        interp_dim
+)
     i = @index(Global, Linear)
     interp_dim.idx_eval[i] = get_idx(interp_dim, interp_dim.t_eval[i])
 end
