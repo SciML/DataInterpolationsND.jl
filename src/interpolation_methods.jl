@@ -1,36 +1,34 @@
 function _interpolate!(
-        out::Union{Number,AbstractArray{<:Any,N_out}},
-        A::NDInterpolation{N,N_in,N_out},
-        ts::Tuple,
-        idx::Tuple,
-        derivative_orders::Tuple,
+        out::Union{Number, AbstractArray{<:Any, N_out}},
+        A::NDInterpolation{N, N_in, N_out},
+        ts::Tuple{Vararg{Any, N}},
+        idx::Tuple{Vararg{Any ,N}},
+        derivative_orders::Tuple{Vararg{Any, N}},
         multi_point_index
 ) where {N,N_in,N_out}
     (; interp_dims, cache, u) = A
 
     check_derivative_order(interp_dims, derivative_orders) || return out
     if isnothing(multi_point_index)
-        multi_point_index = map(_ -> 1, interp_dims)
+        multi_point_index = map(_ -> nothing, interp_dims)
     end
     out = make_zero!!(out)
-    denom = zero(eltype(_remove(Nothing, ts...)))
+    denom = zero(eltype(u))
     # Setup
     space = map(iteration_space, interp_dims)
-    @show prepare interp_dims derivative_orders multi_point_index ts idx
     preparations = map(prepare, interp_dims, derivative_orders, multi_point_index, ts, idx)
 
     for I in Iterators.product(space...)
         scaling = map(scale, interp_dims, preparations, I)
         J = map(index, interp_dims, ts, idx, I)
-        product = if cache isa EmptyCache
-            prod(scaling)
+        if cache isa EmptyCache
+            product = prod(scaling)
         else
-            @show J size(cache.weights)
-            product = cache.weights[J...] * prod(scaling)
+            K = removeat(NoInterpolationDimension, J, interp_dims)
+            product = cache.weights[K...] * prod(scaling)
             denom += product
         end
         if iszero(N_out)
-            @assert all(map(j -> j isa Integer, J))
             out += product * u[J...]
         else
             out .+= product .* view(u, J...)
@@ -51,7 +49,7 @@ end
 check_derivative_order(dims::Tuple, derivative_orders::Tuple) =
     all(map(check_derivative_order, dims, derivative_orders))
 check_derivative_order(::LinearInterpolationDimension, d_o) = d_o <= 1 
-check_derivative_order(::ConstantInterpolationDimension, d_o) = d_0 <= 0
+check_derivative_order(::ConstantInterpolationDimension, d_o) = d_o <= 0
 check_derivative_order(::AbstractInterpolationDimension, d_o) = true
 # TODO how to handle this
 # if derivative_order > 0

@@ -104,6 +104,17 @@ function get_basis_function_values(
         multi_point_index, :, derivative_order + 1)
 end
 
+# Get all basis function values to evaluate a BSpline interpolation in t
+function get_basis_function_values_all(
+        A::NDInterpolation,
+        ts::Tuple,
+        idx::Tuple,
+        derivative_orders::Tuple,
+        multi_point_index
+)
+    map(get_basis_function_values, A.interp_dims, ts, idx, derivative_orders, multi_point_index)
+end
+
 function set_basis_function_eval!(itp_dim::BSplineInterpolationDimension)::Nothing
     backend = get_backend(itp_dim.t_eval)
     basis_function_eval_kernel(backend)(

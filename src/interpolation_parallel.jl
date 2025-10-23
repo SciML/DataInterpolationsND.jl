@@ -64,11 +64,8 @@ out of place.
   - `derivative_orders`: The partial derivative order for each interpolation dimension. Defaults to `0` for each.
 """
 function eval_grid(interp::NDInterpolation; kwargs...)
-    sze = map(interp.interp_dims, size(interp.u)) do d, s
-        d isa NoInterpolationDimension ? s : length(d.t_eval)
-    end
     # TODO: do we need to promote the type here, e.g. for eltype(u) <: Integer ?
-    out = similar(interp.u, sze)
+    out = similar(interp.u, grid_size(interp))
     return eval_grid!(out, interp; kwargs...)
 end
 
@@ -90,11 +87,11 @@ function eval_grid!(
         interp::NDInterpolation{N,N_in};
         derivative_orders::NTuple{N, <:Integer} = ntuple(_ -> 0, N)
 ) where {N,N_in}
-    used_interp_dims = _remove(NoInterpolationDimension, interp.interp_dims...)
     validate_derivative_order(derivative_orders, interp; multi_point = true)
     backend = get_backend(out)
-    @assert all(ntuple(i -> size(out, i) == length(used_interp_dims[i].t_eval), N_in)) "The length must match the t_eval of the corresponding interpolation dimension."
-    @assert size(out)[(N_in + 1):end] == get_output_size(interp) "The size of the last N_out dimensions of out must be the same as the output size of the interpolation."
+    # used_interp_dims = remove(NoInterpolationDimension, interp.interp_dims)
+    # @assert all(ntuple(i -> size(out, i) == length(used_interp_dims[i].t_eval), N_in)) "The length must match the t_eval of the corresponding interpolation dimension."
+    # @assert size(out) == get_output_size(interp) "The size of the last N_out dimensions of out must be the same as the output size of the interpolation."
     eval_kernel(backend)(
         out,
         interp,
@@ -115,7 +112,7 @@ end
     # This kernel is only over interpolated dimensions, we need 
     # to insert fillers to match the number of dimensions in the data
     I = @index(Global, NTuple)
-    k = insert_colon(A, I)
+    k = insertat(NoInterpolationDimension, Colon(), I, A.interp_dims) 
 
     t_eval = map(get_t_eval, A.interp_dims, k)
     idx_eval = map(get_idx_eval, A.interp_dims, k)
@@ -134,10 +131,3 @@ get_t_eval(d::NoInterpolationDimension, i) = nothing
 
 get_idx_eval(d, i) = d.idx_eval[i]
 get_idx_eval(d::NoInterpolationDimension, i) = nothing
-
-# Insert `nothing` into `I` where there is a NoInterpolationDimension
-# This is to expand the index from KernelAbstractions kernel back to 
-# the original dimensionality, where `nothing` is just padding that isn't used.
-insert_colon(A::NDInterpolation, I) = insert_colon(A.interp_dims, I)
-insert_colon(interp_dims::Tuple, I) = 
-    _insertat(NoInterpolationDimension, Colon(), I, (), interp_dims...) 

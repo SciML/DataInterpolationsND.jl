@@ -165,7 +165,6 @@ function BSplineInterpolationDimension(
 
     idx_eval = similar(t_eval, Int)
     s = (length(t_eval), degree + 1, max_derivative_order_eval + 1)
-    @show s
     T = typeof(inv(one(eltype(t))) * inv(one(eltype(t_eval))))
     basis_function_eval = similar(t_eval, T, s)
     itp_dim = BSplineInterpolationDimension(

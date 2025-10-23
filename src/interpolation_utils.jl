@@ -82,7 +82,18 @@ function get_output_size(interp::NDInterpolation)
     I = map(interp.interp_dims, axes(interp.u)) do d, ax
         d isa NoInterpolationDimension ? length(ax) : nothing
     end
-    return _remove(Nothing, I...)
+    return remove(Nothing, I)
+end
+
+function grid_size(interp::NDInterpolation)
+    (; interp_dims) = interp
+    # TODO: put this in a function, but 
+    # Get the size of dims that are not NoInterpolationDimension
+    interp_size = map(d -> length(d.t_eval), remove(NoInterpolationDimension, interp_dims))
+    # Get the size of NoInterpolationDimension dims 
+    nointerp_size = get_output_size(interp)
+    # Insert the nointerp sizes back into the interp_size tuple
+    sze = insertat(NoInterpolationDimension, nointerp_size, interp_size, interp_dims)
 end
 
 make_zero!!(::T) where {T <: Number} = zero(T)
@@ -174,24 +185,70 @@ function get_ndrange(interp::NDInterpolation)
     I = map(interp.interp_dims) do d
         d isa NoInterpolationDimension ? nothing : length(d.t_eval)
     end
-    return _remove(Nothing, I...)
+    return remove(Nothing, I)
 end
 
-# Remove objects of type T from splatted args (taken from DimensionalData.jl) 
-Base.@assume_effects :foldable _remove(::Type{T}, x, xs...) where T = (x, _remove(T, xs...)...)
-Base.@assume_effects :foldable _remove(::Type{T}, ::T, xs...) where T = _remove(T, xs...)
-Base.@assume_effects :foldable _remove(::Type) = ()
 
-# Insert x in `out` where `m isa T`, otherwise output one of in for each m
-# out must exactly match the number of ms or this will error
+# Some tuple handling primitives
+# TODO: make sure these compile away completely
+
+# Remove objects of type `T` from `in` (reworked from DimensionalData.jl) 
+remove(::Type{T}, in) where T = _remove(T, in...)
+_remove(::Type{T}, x, xs...) where T = (x, _remove(T, xs...)...)
+_remove(::Type{T}, x::T, xs...) where T = _remove(T, xs...)
+_remove(::Type) = ()
+
+# Keep only objects of type `T` from `in`
+keep(::Type{T}, in) where T = _keep(T, in...)
+_keep(::Type{T}, x, xs...) where T = _keep(T, xs...)
+_keep(::Type{T}, x::T, xs...) where T = (x, _keep(T, xs...)...)
+_keep(::Type) = ()
+
+# Remove values from `in` where `matches` are of type `T`
+function removeat(::Type{T}, in::Tuple, matches::Tuple) where T
+    @assert length(in) == length(matches) 
+    _removeat(T, in, matches...)  
+end
 # If `!(m isa T)` take from `in`
-Base.@assume_effects :foldable _insertat(::Type{T}, x, in::Tuple{<:Any,Vararg}, out::Tuple, m, ms...) where T = 
-    _insertat(T, x, Base.tail(in), (out..., first(in)), ms...)  
+_removeat(::Type{T}, in::Tuple{<:Any,Vararg}, m, ms...) where T = 
+    (first(in), _removeat(T, Base.tail(in), ms...)...)
+# If `m isa T` remove
+_removeat(::Type{T}, in::Tuple{<:Any,Vararg}, m::T, ms...) where T =
+    _removeat(T, Base.tail(in), ms...)
+# `in` can be empty if there are no remaining `m`
+_removeat(::Type, in::Tuple{}) = ()
+
+# Keep only values from `in` where `matches` are of type `T`
+function keepat(::Type{T}, in::Tuple, matches::Tuple) where T
+    @assert length(in) == length(matches) 
+    _keepat(T, in, matches...)  
+end
+# If `!(m isa T)` disgaurd
+_keepat(::Type{T}, in::Tuple{<:Any,Vararg}, m, ms...) where T = 
+    _keepat(T, Base.tail(in), ms...)
+# If `m isa T` keep
+_keepat(::Type{T}, in::Tuple{<:Any,Vararg}, m::T, ms...) where T =
+    (first(in), _keepat(T, Base.tail(in), ms...)...)
+# `in` can be empty if there are no remaining `m`
+_keepat(::Type, in::Tuple{}) = ()
+
+# Insert x into `in` where `matches` are of type `T`, 
+# otherwise output one of `in` for each `m`. 
+insertat(::Type{T}, x, in::Tuple, matches::Tuple) where T = 
+    _insertat(T, x, in, matches...)  
+# If `!(m isa T)` take from `in`
+_insertat(::Type{T}, x, in::Tuple{<:Any,Vararg}, m, ms...) where T = 
+    (first(in), _insertat(T, x, Base.tail(in), ms...)...)
 # If `m isa T` insert `x`
-Base.@assume_effects :foldable _insertat(::Type{T}, x, in::Tuple{<:Any,Vararg}, out::Tuple, m::T, ms...) where T =
-    _insertat(T, x, in, (out..., x), ms...)  
-# `in` can be empty if all trailing ms are T
-Base.@assume_effects :foldable _insertat(::Type{T}, x, in::Tuple, out::Tuple, m::T, ms::T...) where T =
-    _insertat(T, x, in, (out..., x), ms...)  
-# `in` can also be empty if there are no remaining `m`
-Base.@assume_effects :foldable _insertat(::Type, x, in::Tuple{}, out::Tuple) = out
+_insertat(::Type{T}, x, in::Tuple{<:Any,Vararg}, m::T, ms...) where T =
+    (x, _insertat(T, x, in, ms...)...)
+# For Tuple x we insert the first
+_insertat(::Type{T}, xs::Tuple, in::Tuple{<:Any,Vararg}, m::T, ms...) where T =
+    (first(xs), _insertat(T, Base.tail(xs), in, ms...)...)
+# `in` can be empty if there are no remaining `m`
+_insertat(::Type, x, in::Tuple{}) = ()
+# `in` can also be empty if all trailing ms are T
+_insertat(::Type{T}, x, in::Tuple{}, m::T, ms::T...) where T =
+    (x, _insertat(T, x, in, ms...)...)
+_insertat(::Type{T}, xs::Tuple, in::Tuple{}, m::T, ms::T...) where T =
+    (first(xs), _insertat(T, Base.tail(xs), in, ms...)...)
