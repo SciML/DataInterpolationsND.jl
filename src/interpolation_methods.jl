@@ -8,7 +8,8 @@ function _interpolate!(
 ) where {N,N_in,N_out}
     (; interp_dims, cache, u) = A
 
-    check_derivative_order(interp_dims, derivative_orders) || return out
+    out, valid_derivative_orders = check_derivative_order(interp_dims, derivative_orders, ts, out)
+    valid_derivative_orders || return out
     if isnothing(multi_point_index)
         multi_point_index = map(_ -> nothing, interp_dims)
     end
@@ -46,19 +47,28 @@ function _interpolate!(
     return out
 end
 
-check_derivative_order(dims::Tuple, derivative_orders::Tuple) =
-    all(map(check_derivative_order, dims, derivative_orders))
-check_derivative_order(::LinearInterpolationDimension, d_o) = d_o <= 1 
-check_derivative_order(::ConstantInterpolationDimension, d_o) = d_o <= 0
-check_derivative_order(::AbstractInterpolationDimension, d_o) = true
-# TODO how to handle this
-# if derivative_order > 0
-#     return if any(i -> !isempty(searchsorted(A.interp_dims[i].t, t[i]))
-#         typed_nan(out)
-#     else
-#         out
-#     end
-# end
+function check_derivative_order(dims::Tuple, derivative_orders::Tuple, ts::Tuple, out)
+    itr = map(tuple, dims, derivative_orders, ts)
+    # Fold over itr for all dims, combining out and valid
+    foldl(itr; init=(out, true)) do (acc_out, acc_valid), (d, d_o, t)
+        dim_out, dim_valid = check_derivative_order(d, d_o, t, acc_out)
+        dim_out, dim_valid & acc_valid
+    end
+end
+check_derivative_order(::AbstractInterpolationDimension, d_o, t, out) = (out, true)
+check_derivative_order(::LinearInterpolationDimension, d_o, t, out) = (out, d_o <= 1)
+function check_derivative_order(d::ConstantInterpolationDimension, d_o, t, out)
+    if d_o > 0
+        # Check if t is on the boundary between constant steps and if so return nans
+        return if isempty(searchsorted(d.t, t))
+            (out, false)
+        else
+            (typed_nan(out), false)
+        end
+    else
+        (out, true)
+    end
+end
 
 function prepare(d::LinearInterpolationDimension, derivative_order, multi_point_index, t, i)
     t₁ = d.t[i]
