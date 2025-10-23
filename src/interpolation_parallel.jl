@@ -37,14 +37,14 @@ function eval_unstructured!(
         derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
 ) where {N_in}
     validate_derivative_orders(derivative_orders, interp; multi_point = true)
+    validate_output_size(out, interp) 
     backend = get_backend(out)
-    @assert all(i -> length(interp.interp_dims[i].t_eval) == size(out, 1), N_in) "The t_eval of all interpolation dimensions must have the same length as the first dimension of out."
-    @assert size(out)[2:end]==get_output_size(interp) "The size of the last N_out dimensions of out must be the same as the output size of the interpolation."
+    # TODO this may be broken but it isn't tested
+    @assert all(d -> length(d.t_eval) == size(out, 1), remove(NoInterpolationDimension, interp.interp_dims)) "The t_eval of all interpolation dimensions must have the same length as the first dimension of out."
     eval_kernel(backend)(
         out,
         interp,
         derivative_orders,
-        false,
         ndrange = size(out, 1)
     )
     synchronize(backend)
@@ -87,27 +87,37 @@ function eval_grid!(
         interp::NDInterpolation{N,N_in};
         derivative_orders::NTuple{N, <:Integer} = ntuple(_ -> 0, N)
 ) where {N,N_in}
+    validate_t_eval_lengths(out, interp)
+    validate_output_size(out, interp) 
     validate_derivative_order(derivative_orders, interp; multi_point = true)
     backend = get_backend(out)
-    # used_interp_dims = remove(NoInterpolationDimension, interp.interp_dims)
-    # @assert all(ntuple(i -> size(out, i) == length(used_interp_dims[i].t_eval), N_in)) "The length must match the t_eval of the corresponding interpolation dimension."
-    # @assert size(out) == get_output_size(interp) "The size of the last N_out dimensions of out must be the same as the output size of the interpolation."
     eval_kernel(backend)(
         out,
         interp,
         derivative_orders,
-        true,
         ndrange = get_ndrange(interp)
     )
     synchronize(backend)
     return out
 end
 
+function validate_t_eval_lengths(out, interp)
+    (; interp_dims) = interp
+    interp_sizes = removeat(NoInterpolationDimension, size(out), interp_dims) 
+    interp_t_eval_lengths = map(d -> length(d.t_eval), remove(NoInterpolationDimension, interp_dims))
+    all(map(==, interp_sizes, interp_t_eval_lengths)) || 
+        throw(ArgumentError("The length must match the t_eval of the corresponding interpolation dimension."))
+end
+
+function validate_output_size(out, interp) 
+    keepat(NoInterpolationDimension, size(out), interp.interp_dims) == get_output_size(interp) ||
+        throw(ArumentError("The size of the NoInterpolationDimension dimensions of `out` must be the same as the output size of the interpolation."))
+end
+
 @kernel function eval_kernel(
         out,
         A::NDInterpolation{N, N_in, N_out},
         derivative_orders,
-        eval_grid,
 ) where {N, N_in, N_out}
     # This kernel is only over interpolated dimensions, we need 
     # to insert fillers to match the number of dimensions in the data
