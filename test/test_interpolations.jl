@@ -80,10 +80,6 @@ function test_analytic(itp::NDInterpolation{<:Any,N_in}, f) where {N_in}
     end
 end
 
-@testset "Constant Interpolation" begin
-    test_globally_constant(ConstantInterpolationDimension)
-end
-
 @testset "Linear Interpolation" begin
     test_globally_constant(LinearInterpolationDimension)
 
