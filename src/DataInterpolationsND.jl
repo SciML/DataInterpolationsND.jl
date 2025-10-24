@@ -87,7 +87,8 @@ function (interp::NDInterpolation{N,N_in,N_out})(
     validate_size_u(interp, out)
     validate_derivative_order(derivative_orders, interp)
     idx = get_idx(interp.interp_dims, t)
-    return _interpolate!(out, interp, t, idx, derivative_orders, nothing)
+    multi_point_index = nothing
+    return _interpolate!(out, interp, t, idx, derivative_orders, multi_point_index)
 end
 
 # Out of place single input evaluation
