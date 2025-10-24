@@ -96,13 +96,12 @@ end
 
 function grid_size(interp::NDInterpolation)
     (; interp_dims) = interp
-    # TODO: put this in a function, but 
     # Get the size of dims that are not NoInterpolationDimension
     interp_size = map(d -> length(d.t_eval), remove(NoInterpolationDimension, interp_dims))
     # Get the size of NoInterpolationDimension dims 
     nointerp_size = get_output_size(interp)
     # Insert the nointerp sizes back into the interp_size tuple
-    sze = insertat(NoInterpolationDimension, nointerp_size, interp_size, interp_dims)
+    return insertat(NoInterpolationDimension, nointerp_size, interp_size, interp_dims)
 end
 
 make_zero!!(::T) where {T <: Number} = zero(T)
