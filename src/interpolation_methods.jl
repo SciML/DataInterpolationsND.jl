@@ -13,20 +13,20 @@ function _interpolate!(
     if isnothing(multi_point_index)
         multi_point_index = map(_ -> nothing, interp_dims)
     end
+    # Setup
     out = make_zero!!(out)
     denom = zero(eltype(u))
-    # Setup
     stencils = map(stencil, interp_dims)
     preparations = map(prepare, interp_dims, derivative_orders, multi_point_index, ts, idx)
 
     for I in Iterators.product(stencils...)
-        scaling = map(scale, interp_dims, preparations, I)
         J = map(index, interp_dims, ts, idx, I)
+        weights = map(weight, interp_dims, preparations, I)
         if cache isa EmptyCache
-            product = prod(scaling)
+            product = prod(weights)
         else
             K = removeat(NoInterpolationDimension, J, interp_dims)
-            product = cache.weights[K...] * prod(scaling)
+            product = cache.weights[K...] * prod(weights)
             denom += product
         end
         if iszero(N_out)
@@ -91,7 +91,7 @@ stencil(::ConstantInterpolationDimension) = 1
 stencil(::NoInterpolationDimension) = 1
 stencil(d::BSplineInterpolationDimension) = 1:d.degree + 1
 
-function scale(::LinearInterpolationDimension, prep::NamedTuple, right_point::Bool)
+function weight(::LinearInterpolationDimension, prep::NamedTuple, right_point::Bool)
     (; t, t₁, t₂, t_vol_inv, derivative_order) = prep
     if right_point
         iszero(derivative_order) ? t - t₁ : one(t)
@@ -99,9 +99,9 @@ function scale(::LinearInterpolationDimension, prep::NamedTuple, right_point::Bo
         iszero(derivative_order) ? t₂ - t : -one(t)
     end * t_vol_inv
 end
-scale(::ConstantInterpolationDimension, prep::NamedTuple, i) = 1
-scale(::NoInterpolationDimension, prep::NamedTuple, i) = 1
-scale(::BSplineInterpolationDimension, prep::NamedTuple, i) = prep.basis_function_values[i]
+weight(::ConstantInterpolationDimension, prep::NamedTuple, i) = 1
+weight(::NoInterpolationDimension, prep::NamedTuple, i) = 1
+weight(::BSplineInterpolationDimension, prep::NamedTuple, i) = prep.basis_function_values[i]
 
 index(::LinearInterpolationDimension, t, idx, i) = idx + i
 index(d::ConstantInterpolationDimension, t, idx, i) = t >= d.t[end] ? length(d.t) : idx[i]
