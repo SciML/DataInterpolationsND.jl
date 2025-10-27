@@ -1,100 +1,85 @@
 module DataInterpolationsNDSymbolicsExt
 
+import DataInterpolationsND
 using DataInterpolationsND: NDInterpolation
 using Symbolics
-using Symbolics: Num, unwrap, SymbolicUtils
+using Symbolics: Num, unwrap, SymbolicUtils, Symbolic
 
-# Register just one symbolic function - the promote_symtype is handled by the macro
-@register_symbolic (interp::NDInterpolation)(t::Real)
-
-Base.nameof(interp::NDInterpolation) = :NDInterpolation
-
-# Add method to handle multiple arguments symbolically  
-function (interp::NDInterpolation)(args::Vararg{Num})
-    unwrapped_args = unwrap.(args)
-    Symbolics.wrap(SymbolicUtils.term(interp, unwrapped_args...))
+struct DifferentiatedNDInterpolation{N_in, N_out, I <: NDInterpolation{N_in, N_out}}
+    interp::I
+    derivative_orders::NTuple{N_in, Int}
 end
 
-# Handle direct differentiation of interpolation objects with respect to individual arguments
-function Symbolics.derivative(interp::NDInterpolation, args::NTuple{N, Any}, ::Val{I}) where {N, I}
-    # Create a symbolic term representing the partial derivative
-    # The I-th argument gets differentiated (1-indexed)
-    derivative_orders = ntuple(j -> j == I ? 1 : 0, N)
-    
-    # Create a symbolic function call that represents this partial derivative
-    # We'll use a custom function name to distinguish it from the base interpolation
-    symbolic_args = Symbolics.wrap.(args)
-    Symbolics.unwrap(
-        SymbolicUtils.term(
-            PartialDerivative{I}(interp), 
-            unwrap.(symbolic_args)...
-        )
-    )
+function (interp::DifferentiatedNDInterpolation)(args...)
+    return interp.interp(args; derivative_orders = interp.derivative_orders)
 end
 
-# Define a partial derivative wrapper type to carry the differentiation information
-struct PartialDerivative{I}
-    interp::NDInterpolation
-end
+Base.nameof(::NDInterpolation) = :NDInterpolation
+Base.nameof(::DifferentiatedNDInterpolation) = :DifferentiatedNDInterpolation
 
-# Make the partial derivative callable
-function (pd::PartialDerivative{I})(args...) where {I}
-    derivative_orders = ntuple(j -> j == I ? 1 : 0, length(args))
-    pd.interp(args...; derivative_orders = derivative_orders)
-end
-
-# Promote symtype for partial derivatives
-SymbolicUtils.promote_symtype(::PartialDerivative, _...) = Real
-
-# Name the partial derivative functions appropriately
-Base.nameof(pd::PartialDerivative{I}) where {I} = Symbol("∂$(I)_NDInterpolation")
-
-# Handle higher-order derivatives by chaining partial derivatives
-function Symbolics.derivative(pd::PartialDerivative{J}, args::NTuple{N, Any}, ::Val{I}) where {J, N, I}
-    # Create a new partial derivative that represents higher-order differentiation
-    new_pd = MixedPartialDerivative(pd.interp, (J, I))
-    symbolic_args = Symbolics.wrap.(args)
-    Symbolics.unwrap(
-        SymbolicUtils.term(
-            new_pd,
-            unwrap.(symbolic_args)...
-        )
-    )
-end
-
-# Define mixed partial derivatives for higher-order cases
-struct MixedPartialDerivative
-    interp::NDInterpolation
-    orders::Tuple{Vararg{Int}}
-end
-
-# Make mixed partial derivatives callable
-function (mpd::MixedPartialDerivative)(args...)
-    derivative_orders = ntuple(length(args)) do j
-        count(==(j), mpd.orders)
+for symT in [Num, Symbolic{<:Real}]
+    @eval function (interp::NDInterpolation{N_in, N_out})(t::Vararg{
+            $symT, N_in}) where {N_in, N_out}
+        if $(symT === Num)
+            t = unwrap.(t)
+        end
+        res = if N_out == 0
+            SymbolicUtils.term(interp, t...; type = Real)
+        else
+            Symbolics.array_term(
+                interp, t...; eltype = Real, container_type = Array, ndims = N_out,
+                size = DataInterpolationsND.get_output_size(interp))
+        end
+        if $(symT === Num)
+            if N_out == 0
+                res = Num(res)
+            else
+                res = Symbolics.Arr{Num, N_out}(res)
+            end
+        end
+        return res
     end
-    mpd.interp(args...; derivative_orders = derivative_orders)
+    @eval function (interp::DifferentiatedNDInterpolation{N_in, N_out})(t::Vararg{
+            $symT, N_in}) where {N_in, N_out}
+        if $(symT === Num)
+            t = unwrap.(t)
+        end
+        res = if N_out == 0
+            SymbolicUtils.term(interp, t...; type = Real)
+        else
+            Symbolics.array_term(
+                interp, t...; eltype = Real, container_type = Array, ndims = N_out,
+                size = DataInterpolationsND.get_output_size(interp.interp))
+        end
+        if $(symT === Num)
+            if N_out == 0
+                res = Num(res)
+            else
+                res = Symbolics.Arr{Num, N_out}(res)
+            end
+        end
+        return res
+    end
+end
+function SymbolicUtils.promote_symtype(::NDInterpolation{N_in, N_out}, ::Vararg) where {
+        N_in, N_out}
+    N_out == 0 ? Real : Array{Real, N_out}
 end
 
-# Promote symtype for mixed partial derivatives
-SymbolicUtils.promote_symtype(::MixedPartialDerivative, _...) = Real
-
-# Name mixed partial derivatives
-function Base.nameof(mpd::MixedPartialDerivative)
-    orders_str = join(mpd.orders, "_")
-    Symbol("∂$(orders_str)_NDInterpolation")
+function Symbolics.derivative(interp::NDInterpolation{N_in, N_out},
+        args::NTuple{N_in, Any}, ::Val{I}) where {N_in, N_out, I}
+    @assert I <= N_in
+    orders = ntuple(Int ∘ isequal(I), Val{N_in}())
+    dinterp = DifferentiatedNDInterpolation{N_in, N_out, typeof(interp)}(interp, orders)
+    return dinterp(args...)
 end
 
-# Handle further differentiation of mixed partial derivatives
-function Symbolics.derivative(mpd::MixedPartialDerivative, args::NTuple{N, Any}, ::Val{I}) where {N, I}
-    new_mpd = MixedPartialDerivative(mpd.interp, (mpd.orders..., I))
-    symbolic_args = Symbolics.wrap.(args)
-    Symbolics.unwrap(
-        SymbolicUtils.term(
-            new_mpd,
-            unwrap.(symbolic_args)...
-        )
-    )
+function Symbolics.derivative(interp::DifferentiatedNDInterpolation{N_in, N_out},
+        args::NTuple{N_in, Any}, ::Val{I}) where {N_in, N_out, I}
+    @assert I <= N_in
+    orders_offset = ntuple(Int ∘ isequal(I), Val{N_in}())
+    orders = interp.derivative_orders .+ orders_offset
+    return typeof(interp)(interp.interp, orders)(args...)
 end
 
 end # module
