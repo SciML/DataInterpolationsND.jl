@@ -1,39 +1,58 @@
 using DataInterpolationsND
 using Symbolics
-using SafeTestsets
+import SymbolicUtils as SU
+using Symbolics: unwrap
+using Test
 
-@safetestset "Symbolics Extension" begin
-    using Test
-    
-    # Create a simple 2D interpolation
-    t1 = [1.0, 2.0, 3.0]
-    t2 = [0.0, 1.0, 2.0]
-    u = [i + j for i in t1, j in t2]  # 3x3 matrix
+t1 = cumsum(rand(5))
+t2 = cumsum(rand(7))
 
-    itp_dims = (
-        LinearInterpolationDimension(t1),
-        LinearInterpolationDimension(t2)
-    )
-    itp = NDInterpolation(u, itp_dims)
+interpolation_dimensions = (
+    LinearInterpolationDimension(t1),
+    LinearInterpolationDimension(t2)
+)
 
-    # Test symbolic variables
-    @variables x y
+u = rand(5, 7, 2)
 
-    # Test symbolic evaluation
-    result = itp(x, y)
-    @test result isa Symbolics.Num
+interp = NDInterpolation(u, interpolation_dimensions)
+@variables x y
 
-    # Test symbolic differentiation
-    ∂f_∂x = Symbolics.derivative(result, x)
-    ∂f_∂y = Symbolics.derivative(result, y)
+@testset "Basics" begin
+    ex = interp(x, y)
+    @test ex isa Symbolics.Arr
+    @test size(ex) == (2,)
+    @test SU.symtype(unwrap(ex)) == Vector{Real}
 
-    @test ∂f_∂x isa Symbolics.Num
-    @test ∂f_∂y isa Symbolics.Num
+    res = eval(quote
+        let x = 0.4, y = 0.8
+            $(SU.Code.toexpr(ex))
+        end
+    end)
+    @test res ≈ interp(0.4, 0.8)
 
-    # Test that we can substitute values
-    substituted = Symbolics.substitute(result, Dict(x => 1.5, y => 0.5))
-    
-    # Compare with numerical evaluation
-    numerical_result = itp(1.5, 0.5)
-    @test Float64(substituted) ≈ numerical_result
+    ex = interp(unwrap(x), unwrap(y))
+    @test ex isa SU.BasicSymbolic{Vector{Real}}
+end
+
+@testset "Differentiation" begin
+    ex = interp(x, y)
+    der = Symbolics.derivative(ex[1], x)
+    @test size(der) == ()
+    @test SU.symtype(unwrap(der)) == Real
+    res = eval(quote
+        let x = 0.4, y = 0.8
+            $(SU.Code.toexpr(der))
+        end
+    end)
+    @test res ≈ interp(0.4, 0.8; derivative_orders = (1, 0))[1]
+
+    der = Symbolics.derivative(ex[1], y)
+    @test size(der) == ()
+    @test SU.symtype(unwrap(der)) == Real
+    res = eval(quote
+        let x = 0.4, y = 0.8
+            $(SU.Code.toexpr(der))
+        end
+    end)
+    @test res ≈ interp(0.4, 0.8; derivative_orders = (0, 1))[1]
 end
