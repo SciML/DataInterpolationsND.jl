@@ -67,6 +67,7 @@ include("interpolation_utils.jl")
 include("interpolation_methods.jl")
 include("interpolation_parallel.jl")
 include("plot_rec.jl")
+include("interp_array.jl")
 
 # Multiple `t` arguments to tuple (can these 2 be done in 1?)
 function (interp::NDInterpolation)(t_args::Vararg{Number}; kwargs...)
@@ -81,14 +82,19 @@ end
 # In place single input evaluation
 function (interp::NDInterpolation{N,N_in,N_out})(
         out::Union{Number, AbstractArray{<:Number, N_out}},
-        t::Tuple{Vararg{Number, N}};
-        derivative_orders::NTuple{N, <:Integer} = ntuple(_ -> 0, N)
+        t::Tuple{Vararg{Any, N_in}};
+        derivative_orders::Tuple{Vararg{Integer,N_in}} = ntuple(_ -> 0, N_in)
 ) where {N,N_in,N_out}
     validate_size_u(interp, out)
-    validate_derivative_order(derivative_orders, interp)
-    idx = get_idx(interp.interp_dims, t)
+    # We need to add the NoInterpolationDimensions for all arguments to _interpolate.
+    # Currently interp() accepts only the interpolating dimensions.
+    # We could switch this so it needs indices for NoInterpolationDimension, but thats a breaking change.
+    t_all = insertat(NoInterpolationDimension, Colon(), t, interp.interp_dims)
+    idx_all = get_idx(interp.interp_dims, t_all)
+    d_o_all = insertat(NoInterpolationDimension, 0, derivative_orders, interp.interp_dims)
+    validate_derivative_order(d_o_all, interp)
     multi_point_index = nothing
-    return _interpolate!(out, interp, t, idx, derivative_orders, multi_point_index)
+    return _interpolate!(out, interp, t_all, idx_all, d_o_all, multi_point_index)
 end
 
 # Out of place single input evaluation

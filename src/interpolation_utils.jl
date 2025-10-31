@@ -46,9 +46,10 @@ function validate_t(t)
     @assert all(>(0), diff(t)) "The elements of t must be sorted and unique."
 end
 
-validate_size_u(::NDInterpolation{N,N,0}, u::Number) where N = nothing
-validate_size_u(interp::NDInterpolation, u::AbstractArray) = validate_size_u(interp.interp_dims, axes(u))
-validate_size_u(interp_dims::Tuple, u::AbstractArray) = map(validate_size_u, interp_dims, axes(u))
+validate_size_u(interp::NDInterpolation, u) = validate_size_u(interp.interp_dims, u)
+validate_size_u(interp_dims::Tuple, u::Number) = nothing
+validate_size_u(interp_dims::Tuple, u::AbstractArray) = validate_size_u(interp_dims, axes(u))
+validate_size_u(interp_dims::Tuple, ax::Tuple) = map(validate_size_u, interp_dims, ax)
 validate_size_u(interp_dim::NoInterpolationDimension, ax::AbstractRange) = nothing
 function validate_size_u(interp_dim::AbstractInterpolationDimension, ax::AbstractRange)
     @assert length(interp_dim) == length(ax) "For the first N_in dimensions of u the length must match the t of the corresponding interpolation dimension."
@@ -106,8 +107,8 @@ end
 
 make_zero!!(::T) where {T <: Number} = zero(T)
 
-function make_zero!!(v::T) where {T <: AbstractArray}
-    v .= 0
+function make_zero!!(v::AbstractArray)
+    fill!(v, zero(eltype(v)))
     v
 end
 
@@ -115,7 +116,7 @@ function make_out(
         interp::NDInterpolation{<:Any,N_in, 0},
         t::NTuple{N_in, >:Number}
 ) where {N_in}
-    zero(promote_type(eltype(interp.u), map(typeof, t)...))
+    zero(eltype(interp.u))
 end
 function make_out(
         interp::NDInterpolation{<:Any,N_in},
@@ -156,14 +157,10 @@ function get_idx(
         clamp(searchsortedlast(t, t_eval) + idx_shift, lb, ub)
     end
 end
-
-get_idx(::NoInterpolationDimension, t_eval::Number) = nothing
-function get_idx(
-        interp_dims::NTuple{N},
-        t::Tuple{Vararg{Number, N}};
-) where {N}
+# t_eval must already be an index for NoInterpolationDimension
+get_idx(::NoInterpolationDimension, t_eval::Union{Colon,Int,AbstractArray{Int}}) = t_eval
+get_idx(interp_dims::Tuple{Vararg{Any,N}}, t::Tuple{Vararg{Any,N}}) where N = 
     map(get_idx, interp_dims, t)
-end
 
 function set_eval_idx!(
         interp_dim::AbstractInterpolationDimension,

@@ -175,15 +175,15 @@ end
 end
 
 @testset "Mixed Interpolation" begin
-    t1 = cumsum(rand(3))
     t2 = cumsum(rand(4))
     t3 = collect(0:(π / 2):(2π))
-    u = zeros(3, 4, 5)
+    u = ones(3, 4, 5)
     itp_dims = (
         NoInterpolationDimension(),
         LinearInterpolationDimension(t2; t_eval=t2),
         BSplineInterpolationDimension(t3, 1; t_eval=t3),
     )
     itp = NDInterpolation(u, itp_dims)
+    @test isapprox(itp(1.0, 4.0), [1.0, 1.0, 1.0])
     eval_grid(itp)
 end

@@ -91,10 +91,12 @@ function eval_grid!(
     validate_output_size(out, interp) 
     validate_derivative_order(derivative_orders, interp; multi_point = true)
     backend = get_backend(out)
+    no_interp_inds = map(_ -> Colon(), remove(NoInterpolationDimension, interp.interp_dims))
     eval_kernel(backend)(
         out,
         interp,
         derivative_orders,
+        no_interp_inds,
         ndrange = get_ndrange(interp)
     )
     synchronize(backend)
@@ -118,16 +120,17 @@ end
         out,
         A, # @Const(A), TODO: somehow this now hits a bug in KernelAbstractions where elsize is not defined for Const
         derivative_orders,
+        no_interp_inds,
 ) 
     N_out = length(keep(NoInterpolationDimension, A.interp_dims))
     I = @index(Global, NTuple)
-    k = insertat(NoInterpolationDimension, Colon(), I, A.interp_dims) 
+    k = insertat(NoInterpolationDimension, no_interp_inds, I, A.interp_dims) 
 
     t_eval = map(get_t_eval, A.interp_dims, k)
     idx_eval = map(get_idx_eval, A.interp_dims, k)
 
     if iszero(N_out)
-        out[k...] = _interpolate!(
+        @inbounds out[k...] = _interpolate!(
             make_out(A, t_eval), A, t_eval, idx_eval, derivative_orders, k)
     else
         _interpolate!(
@@ -136,8 +139,16 @@ end
     end
 end
 
-get_t_eval(d, i) = d.t_eval[i]
-get_t_eval(d::NoInterpolationDimension, i) = nothing
+get_t_eval(d::AbstractInterpolationDimension, i) = d.t_eval[i]
+get_t_eval(d::AbstractInterpolationDimension, i::Colon) = d.t_eval
+get_t_eval(d::AbstractInterpolationDimension, i::AbstractVector) = d.t_eval[i]
+get_t_eval(::NoInterpolationDimension, i) = nothing
+get_t_eval(::NoInterpolationDimension, i::Colon) = nothing
+get_t_eval(::NoInterpolationDimension, i::AbstractVector) = nothing
 
-get_idx_eval(d, i) = d.idx_eval[i]
-get_idx_eval(d::NoInterpolationDimension, i) = nothing
+get_idx_eval(d::AbstractInterpolationDimension, i) = d.idx_eval[i]
+get_idx_eval(d::AbstractInterpolationDimension, i::AbstractVector) = d.idx_eval[i]
+get_idx_eval(d::AbstractInterpolationDimension, i::Colon) = d.idx_eval
+get_idx_eval(::NoInterpolationDimension, i) = i
+get_idx_eval(::NoInterpolationDimension, i::Colon) = i
+get_idx_eval(::NoInterpolationDimension, i::AbstractVector) = i

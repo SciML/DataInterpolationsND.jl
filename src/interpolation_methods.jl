@@ -1,11 +1,11 @@
-function _interpolate!(
-        out::Union{Number, AbstractArray{<:Any, N_out}},
-        A::NDInterpolation{N, N_in, N_out},
+Base.@propagate_inbounds function _interpolate!(
+        out::Union{Number, AbstractArray},
+        A::NDInterpolation{N},
         ts::Tuple{Vararg{Any, N}},
         idx::Tuple{Vararg{Any ,N}},
         derivative_orders::Tuple{Vararg{Any, N}},
-        multi_point_index
-) where {N,N_in,N_out}
+        multi_point_index,
+) where N
     (; interp_dims, cache, u) = A
 
     out, valid_derivative_orders = check_derivative_order(interp_dims, derivative_orders, ts, out)
@@ -13,34 +13,36 @@ function _interpolate!(
     if isnothing(multi_point_index)
         multi_point_index = map(_ -> nothing, interp_dims)
     end
-    # Setup
-    out = make_zero!!(out)
-    denom = zero(eltype(u))
-    stencils = map(stencil, interp_dims)
-    preparations = map(prepare, interp_dims, derivative_orders, multi_point_index, ts, idx)
 
+    # Setup
+    out = make_zero!!(out) # TODO remove this
+    stencils = map(stencil, interp_dims)
+    stencil_weights = map(weights, interp_dims, derivative_orders, multi_point_index, ts, idx)
+    denom = zero(eltype(u))
+
+    # TODO this can be a single unrolled broadcast rather than a loop of .+=
     for I in Iterators.product(stencils...)
         J = map(index, interp_dims, ts, idx, I)
-        weights = map(weight, interp_dims, preparations, I)
-        if cache isa EmptyCache
-            product = prod(weights)
-        else
+        product = prod(map(getindex, stencil_weights, I))
+
+        if !(cache isa EmptyCache)
             K = removeat(NoInterpolationDimension, J, interp_dims)
-            product = cache.weights[K...] * prod(weights)
+            product *= cache.weights[K...]
             denom += product
         end
-        if iszero(N_out)
-            out += product * u[J...]
+
+        if out isa AbstractArray
+            out .+= product .* u[J...]
         else
-            out .+= product .* view(u, J...)
+            out += product * u[J...]
         end
     end
 
     if !(cache isa EmptyCache)
-        if iszero(N_out)
-            out /= denom
-        else
+        if out isa AbstractArray
             out ./= denom
+        else
+            out /= denom
         end
     end
 
@@ -70,40 +72,27 @@ function check_derivative_order(d::ConstantInterpolationDimension, d_o, t, out)
     end
 end
 
-function prepare(d::LinearInterpolationDimension, derivative_order, multi_point_index, t, i)
-    t₁ = d.t[i]
-    t₂ = d.t[i + 1]
-    t_vol_inv = inv(t₂ - t₁)
-    return (; t, t₁, t₂, t_vol_inv, derivative_order)
-end
-prepare(::ConstantInterpolationDimension, derivative_orders, multi_point_index, t, i) = (;)
-prepare(::NoInterpolationDimension, derivative_orders, multi_point_index, t, i) = (;)
-function prepare(d::BSplineInterpolationDimension, derivative_order, multi_point_index, t, i)
-    # TODO the dim_in arg isn't really needed, so drop it. Currently just 0
-    basis_function_values = get_basis_function_values(
-        d, t, i, derivative_order, multi_point_index
-    )
-    return (; basis_function_values)
-end
-
-stencil(::LinearInterpolationDimension) = (false, true)
+stencil(::LinearInterpolationDimension) = (1, 2)
 stencil(::ConstantInterpolationDimension) = 1
 stencil(::NoInterpolationDimension) = 1
 stencil(d::BSplineInterpolationDimension) = 1:d.degree + 1
 
-function weight(::LinearInterpolationDimension, prep::NamedTuple, right_point::Bool)
-    (; t, t₁, t₂, t_vol_inv, derivative_order) = prep
-    if right_point
-        iszero(derivative_order) ? t - t₁ : one(t)
-    else
-        iszero(derivative_order) ? t₂ - t : -one(t)
-    end * t_vol_inv
+# Precalculate weights
+function weights(d::LinearInterpolationDimension, derivative_order, multi_point_index, t, i)
+    t₁ = d.t[i]
+    t₂ = d.t[i + 1]
+    t_vol_inv = inv(t₂ - t₁)
+    a = (iszero(derivative_order) ? t₂ - t : -one(t)) * t_vol_inv
+    b = (iszero(derivative_order) ? t - t₁ : one(t)) * t_vol_inv
+    return (a, b)
 end
-weight(::ConstantInterpolationDimension, prep::NamedTuple, i) = 1
-weight(::NoInterpolationDimension, prep::NamedTuple, i) = 1
-weight(::BSplineInterpolationDimension, prep::NamedTuple, i) = prep.basis_function_values[i]
+weights(::ConstantInterpolationDimension, derivative_order, multi_point_index, t, i) = 1
+weights(::NoInterpolationDimension, derivative_order, multi_point_index, t, i) = 1
+weights(d::BSplineInterpolationDimension, derivative_order, multi_point_index, t, i) =
+    get_basis_function_values(d, t, i, derivative_order, multi_point_index)
 
-index(::LinearInterpolationDimension, t, idx, i) = idx + i
+index(::LinearInterpolationDimension, t, idx, i) = idx + i - 1
+# TODO: this should happen outside of the loop
 index(d::ConstantInterpolationDimension, t, idx, i) = t >= d.t[end] ? length(d.t) : idx[i]
-index(::NoInterpolationDimension, t, idx, i) = Colon()
+index(::NoInterpolationDimension, t, idx, i) = idx
 index(d::BSplineInterpolationDimension, t, idx, i) = idx + i - d.degree - 1
