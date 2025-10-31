@@ -2,13 +2,14 @@ Base.@propagate_inbounds function _interpolate!(
         out::Union{Number, AbstractArray},
         A::NDInterpolation{N},
         ts::Tuple{Vararg{Any, N}},
-        idx::Tuple{Vararg{Any ,N}},
+        idx::Tuple{Vararg{Any, N}},
         derivative_orders::Tuple{Vararg{Any, N}},
-        multi_point_index,
-) where N
+        multi_point_index
+) where {N}
     (; interp_dims, cache, u) = A
 
-    out, valid_derivative_orders = check_derivative_order(interp_dims, derivative_orders, ts, out)
+    out, valid_derivative_orders = check_derivative_order(
+        interp_dims, derivative_orders, ts, out)
     valid_derivative_orders || return out
     if isnothing(multi_point_index)
         multi_point_index = map(_ -> nothing, interp_dims)
@@ -17,7 +18,8 @@ Base.@propagate_inbounds function _interpolate!(
     # Setup
     out = make_zero!!(out) # TODO remove this
     stencils = map(stencil, interp_dims)
-    stencil_weights = map(weights, interp_dims, derivative_orders, multi_point_index, ts, idx)
+    stencil_weights = map(
+        weights, interp_dims, derivative_orders, multi_point_index, ts, idx)
     denom = zero(eltype(u))
 
     # TODO this can be a single unrolled broadcast rather than a loop of .+=
@@ -52,7 +54,7 @@ end
 function check_derivative_order(dims::Tuple, derivative_orders::Tuple, ts::Tuple, out)
     itr = map(tuple, dims, derivative_orders, ts)
     # Fold over itr for all dims, combining out and valid
-    foldl(itr; init=(out, true)) do (acc_out, acc_valid), (d, d_o, t)
+    foldl(itr; init = (out, true)) do (acc_out, acc_valid), (d, d_o, t)
         dim_out, dim_valid = check_derivative_order(d, d_o, t, acc_out)
         dim_out, dim_valid & acc_valid
     end
@@ -75,7 +77,7 @@ end
 stencil(::LinearInterpolationDimension) = (1, 2)
 stencil(::ConstantInterpolationDimension) = 1
 stencil(::NoInterpolationDimension) = 1
-stencil(d::BSplineInterpolationDimension) = 1:d.degree + 1
+stencil(d::BSplineInterpolationDimension) = 1:(d.degree + 1)
 
 # Precalculate weights
 function weights(d::LinearInterpolationDimension, derivative_order, multi_point_index, t, i)
@@ -88,8 +90,10 @@ function weights(d::LinearInterpolationDimension, derivative_order, multi_point_
 end
 weights(::ConstantInterpolationDimension, derivative_order, multi_point_index, t, i) = 1
 weights(::NoInterpolationDimension, derivative_order, multi_point_index, t, i) = 1
-weights(d::BSplineInterpolationDimension, derivative_order, multi_point_index, t, i) =
+function weights(
+        d::BSplineInterpolationDimension, derivative_order, multi_point_index, t, i)
     get_basis_function_values(d, t, i, derivative_order, multi_point_index)
+end
 
 index(::LinearInterpolationDimension, t, idx, i) = idx + i - 1
 # TODO: this should happen outside of the loop

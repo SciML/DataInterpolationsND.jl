@@ -37,10 +37,11 @@ function eval_unstructured!(
         derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
 ) where {N_in}
     validate_derivative_orders(derivative_orders, interp; multi_point = true)
-    validate_output_size(out, interp) 
+    validate_output_size(out, interp)
     backend = get_backend(out)
     # TODO this may be broken but it isn't tested
-    @assert all(d -> length(d.t_eval) == size(out, 1), remove(NoInterpolationDimension, interp.interp_dims)) "The t_eval of all interpolation dimensions must have the same length as the first dimension of out."
+    @assert all(d -> length(d.t_eval) == size(out, 1),
+        remove(NoInterpolationDimension, interp.interp_dims)) "The t_eval of all interpolation dimensions must have the same length as the first dimension of out."
     eval_kernel(backend)(
         out,
         interp,
@@ -84,11 +85,11 @@ in place.
 """
 function eval_grid!(
         out::AbstractArray,
-        interp::NDInterpolation{N,N_in};
+        interp::NDInterpolation{N, N_in};
         derivative_orders::NTuple{N, <:Integer} = ntuple(_ -> 0, N)
-) where {N,N_in}
+) where {N, N_in}
     validate_t_eval_lengths(out, interp)
-    validate_output_size(out, interp) 
+    validate_output_size(out, interp)
     validate_derivative_order(derivative_orders, interp; multi_point = true)
     backend = get_backend(out)
     no_interp_inds = map(_ -> Colon(), remove(NoInterpolationDimension, interp.interp_dims))
@@ -105,14 +106,16 @@ end
 
 function validate_t_eval_lengths(out, interp)
     (; interp_dims) = interp
-    interp_sizes = removeat(NoInterpolationDimension, size(out), interp_dims) 
-    interp_t_eval_lengths = map(d -> length(d.t_eval), remove(NoInterpolationDimension, interp_dims))
-    all(map(==, interp_sizes, interp_t_eval_lengths)) || 
+    interp_sizes = removeat(NoInterpolationDimension, size(out), interp_dims)
+    interp_t_eval_lengths = map(
+        d -> length(d.t_eval), remove(NoInterpolationDimension, interp_dims))
+    all(map(==, interp_sizes, interp_t_eval_lengths)) ||
         throw(ArgumentError("The length must match the t_eval of the corresponding interpolation dimension."))
 end
 
-function validate_output_size(out, interp) 
-    keepat(NoInterpolationDimension, size(out), interp.interp_dims) == get_output_size(interp) ||
+function validate_output_size(out, interp)
+    keepat(NoInterpolationDimension, size(out), interp.interp_dims) ==
+    get_output_size(interp) ||
         throw(ArumentError("The size of the NoInterpolationDimension dimensions of `out` must be the same as the output size of the interpolation."))
 end
 
@@ -120,11 +123,11 @@ end
         out,
         A, # @Const(A), TODO: somehow this now hits a bug in KernelAbstractions where elsize is not defined for Const
         derivative_orders,
-        no_interp_inds,
-) 
+        no_interp_inds
+)
     N_out = length(keep(NoInterpolationDimension, A.interp_dims))
     I = @index(Global, NTuple)
-    k = insertat(NoInterpolationDimension, no_interp_inds, I, A.interp_dims) 
+    k = insertat(NoInterpolationDimension, no_interp_inds, I, A.interp_dims)
 
     t_eval = map(get_t_eval, A.interp_dims, k)
     idx_eval = map(get_idx_eval, A.interp_dims, k)

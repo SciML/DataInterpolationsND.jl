@@ -23,7 +23,7 @@ the size of `u` along that dimension must match the length of `t` of the corresp
 """
 struct NDInterpolation{
     N,
-    N_in, 
+    N_in,
     N_out,
     gType <: AbstractInterpolationCache,
     D,
@@ -32,7 +32,7 @@ struct NDInterpolation{
     u::uType
     interp_dims::D
     cache::gType
-    function NDInterpolation(u::AbstractArray{<:Any,N}, interp_dims, cache) where N
+    function NDInterpolation(u::AbstractArray{<:Any, N}, interp_dims, cache) where {N}
         interp_dims = _add_trailing_interp_dims(interp_dims, Val{N}())
         N_in = _count_interpolating_dims(interp_dims)
         N_out = _count_noninterpolating_dims(interp_dims)
@@ -46,13 +46,19 @@ struct NDInterpolation{
 end
 
 # TODO probably not type-stable (this needs to compile away completely)
-_count_interpolating_dims(interp_dims) = count(map(d -> !(d isa NoInterpolationDimension), interp_dims))
-_count_noninterpolating_dims(interp_dims) = count(map(d -> d isa NoInterpolationDimension, interp_dims))
+function _count_interpolating_dims(interp_dims)
+    count(map(d -> !(d isa NoInterpolationDimension), interp_dims))
+end
+function _count_noninterpolating_dims(interp_dims)
+    count(map(d -> d isa NoInterpolationDimension, interp_dims))
+end
 
-_add_trailing_interp_dims(dim::AbstractInterpolationDimension, n) = 
+function _add_trailing_interp_dims(dim::AbstractInterpolationDimension, n)
     _add_trailing_interp_dims((dim,), n)
-_add_trailing_interp_dims(dims::Tuple, ::Val{N}) where N = 
-    (dims..., ntuple(_ -> NoInterpolationDimension(), Val{N-length(dims)}())...)
+end
+function _add_trailing_interp_dims(dims::Tuple, ::Val{N}) where {N}
+    (dims..., ntuple(_ -> NoInterpolationDimension(), Val{N - length(dims)}())...)
+end
 
 # Constructor with optional global cache
 function NDInterpolation(u, interp_dims; cache = EmptyCache())
@@ -79,11 +85,11 @@ function (interp::NDInterpolation)(
 end
 
 # In place single input evaluation
-function (interp::NDInterpolation{N,N_in,N_out})(
+function (interp::NDInterpolation{N, N_in, N_out})(
         out::Union{Number, AbstractArray{<:Number, N_out}},
         t::Tuple{Vararg{Any, N_in}};
-        derivative_orders::Tuple{Vararg{Integer,N_in}} = ntuple(_ -> 0, N_in)
-) where {N,N_in,N_out}
+        derivative_orders::Tuple{Vararg{Integer, N_in}} = ntuple(_ -> 0, N_in)
+) where {N, N_in, N_out}
     validate_size_u(interp, out)
     # We need to add the NoInterpolationDimensions for all arguments to _interpolate.
     # Currently interp() accepts only the interpolating dimensions.

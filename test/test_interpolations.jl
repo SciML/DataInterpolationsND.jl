@@ -1,27 +1,27 @@
 using DataInterpolationsND
 using Random
-using DataInterpolationsND: AbstractInterpolationDimension, EmptyCache, 
-    keepat, removeat, insertat, remove, keep
+using DataInterpolationsND: AbstractInterpolationDimension, EmptyCache,
+                            keepat, removeat, insertat, remove, keep
 
 @testset "tuple primitives" begin
     # These help with handling NoInterpolationDimension and its consequences
     @test insertat(Nothing, 1, (2,), (nothing, 4, nothing)) === (1, 2, 1)
     @test insertat(Float64, missing, (1,), (8, 9.0)) === (1, missing)
     @test keepat(Nothing, (1, 2, 3), (nothing, 4, nothing)) === (1, 3)
-    @test keepat(Float64, (1, 2,), (8, 9.0)) === (2,)
+    @test keepat(Float64, (1, 2), (8, 9.0)) === (2,)
     @test removeat(Nothing, (1, 2, 3), (nothing, 4, nothing)) === (2,)
-    @test removeat(Float64, (1, 2,), (8, 9.0)) === (1,)
+    @test removeat(Float64, (1, 2), (8, 9.0)) === (1,)
     @test remove(Nothing, (1, nothing, 3)) === (1, 3)
     @test keep(Int, (1, nothing, 3)) === (1, 3)
 end
 
-function test_globally_constant(ID::Type{<:AbstractInterpolationDimension}; 
-    args1 = (), 
-    args2 = (), 
-    kwargs1 = (),
-    kwargs2 = (), 
-    cache = EmptyCache(), 
-    test_derivatives = true
+function test_globally_constant(ID::Type{<:AbstractInterpolationDimension};
+        args1 = (),
+        args2 = (),
+        kwargs1 = (),
+        kwargs2 = (),
+        cache = EmptyCache(),
+        test_derivatives = true
 )
     t1 = [-3.14, 1.0, 3.0, 7.6, 12.8]
     t2 = [-2.71, 1.41, 12.76, 50.2, 120.0]
@@ -64,7 +64,7 @@ function test_globally_constant(ID::Type{<:AbstractInterpolationDimension};
     end
 end
 
-function test_analytic(itp::NDInterpolation{<:Any,N_in}, f) where {N_in}
+function test_analytic(itp::NDInterpolation{<:Any, N_in}, f) where {N_in}
     used_interp_dims = remove(NoInterpolationDimension, itp.interp_dims)
     # Evaluation in data points
     ts = map(d -> d.t, used_interp_dims)
@@ -96,7 +96,6 @@ end
     itp = NDInterpolation(u, itp_dims)
     test_analytic(itp, f)
 
-
     itp_dims = (
         NoInterpolationDimension(),
         LinearInterpolationDimension(t2; t_eval = t2 ./ 2)
@@ -111,7 +110,7 @@ end
     args2 = (3,)
     kwargs1 = (:max_derivative_order_eval => 1,)
     kwargs2 = (:max_derivative_order_eval => 1,)
-    cache = EmptyCache() 
+    cache = EmptyCache()
     test_derivatives = true
     test_globally_constant(ID; args1, args2, kwargs1, kwargs2, cache, test_derivatives)
 
@@ -180,8 +179,8 @@ end
     u = ones(3, 4, 5)
     itp_dims = (
         NoInterpolationDimension(),
-        LinearInterpolationDimension(t2; t_eval=t2),
-        BSplineInterpolationDimension(t3, 1; t_eval=t3),
+        LinearInterpolationDimension(t2; t_eval = t2),
+        BSplineInterpolationDimension(t3, 1; t_eval = t3)
     )
     itp = NDInterpolation(u, itp_dims)
     @test isapprox(itp(1.0, 4.0), [1.0, 1.0, 1.0])

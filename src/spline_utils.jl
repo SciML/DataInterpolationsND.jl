@@ -60,7 +60,7 @@ function get_basis_function_values(
         t::Number,
         idx::Integer,
         derivative_order::Integer,
-        multi_point_index::Nothing,
+        multi_point_index::Nothing
 )
     (; degree, knots_all) = itp_dim
     T = promote_type(typeof(t), eltype(itp_dim.basis_function_eval))
@@ -99,7 +99,7 @@ function get_basis_function_values(
         t::Number,
         idx::Integer,
         derivative_order::Integer,
-        multi_point_index::Integer,
+        multi_point_index::Integer
 )
     view(itp_dim.basis_function_eval,
         multi_point_index, :, derivative_order + 1)
@@ -113,7 +113,8 @@ function get_basis_function_values_all(
         derivative_orders::Tuple,
         multi_point_index
 )
-    map(get_basis_function_values, A.interp_dims, ts, idx, derivative_orders, multi_point_index)
+    map(get_basis_function_values, A.interp_dims, ts,
+        idx, derivative_orders, multi_point_index)
 end
 
 function set_basis_function_eval!(itp_dim::BSplineInterpolationDimension)::Nothing
@@ -136,7 +137,7 @@ end
         itp_dim.t_eval[i],
         itp_dim.idx_eval[i],
         derivative_order_plus_1 - 1,
-        nothing,
+        nothing
     )
 end
 
