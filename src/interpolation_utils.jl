@@ -19,11 +19,11 @@ function validate_derivative_order(
 )
     if multi_point
         @assert derivative_order≤interp_dim.max_derivative_order_eval """
-      For BSpline interpolation, when using multi-point evaluation the derivative orders cannot be
-      larger than the `max_derivative_order_eval` eval of of the `BSplineInterpolationDimension`. If you want
-      to compute higher order multi-point derivatives, pass a larger `max_derivative_order_eval` to the
-      `BSplineInterpolationDimension` constructor(s).
-      """
+For BSpline interpolation, when using multi-point evaluation the derivative orders cannot be
+larger than the `max_derivative_order_eval` eval of of the `BSplineInterpolationDimension`. If you want
+to compute higher order multi-point derivatives, pass a larger `max_derivative_order_eval` to the
+`BSplineInterpolationDimension` constructor(s).
+"""
     end
     validate_derivative_order_by_cache(cache, derivative_order)
 end

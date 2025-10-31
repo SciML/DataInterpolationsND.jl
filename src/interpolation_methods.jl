@@ -8,7 +8,8 @@ Base.@propagate_inbounds function _interpolate!(
 ) where {N}
     (; interp_dims, cache, u) = A
 
-    out, valid_derivative_orders = check_derivative_order(
+    out,
+    valid_derivative_orders = check_derivative_order(
         interp_dims, derivative_orders, ts, out)
     valid_derivative_orders || return out
     if isnothing(multi_point_index)
