@@ -1,10 +1,28 @@
-using DataInterpolationsND: AbstractInterpolationDimension, EmptyCache
 using DataInterpolationsND
 using Random
+using DataInterpolationsND: AbstractInterpolationDimension, EmptyCache,
+                            keepat, removeat, insertat, remove, keep
 
-function test_globally_constant(
-        ID::Type{<:AbstractInterpolationDimension}; args1 = (), args2 = (), kwargs1 = (),
-        kwargs2 = (), cache = EmptyCache(), test_derivatives = true)
+@testset "tuple primitives" begin
+    # These help with handling NoInterpolationDimension and its consequences
+    @test insertat(Nothing, 1, (2,), (nothing, 4, nothing)) === (1, 2, 1)
+    @test insertat(Float64, missing, (1,), (8, 9.0)) === (1, missing)
+    @test keepat(Nothing, (1, 2, 3), (nothing, 4, nothing)) === (1, 3)
+    @test keepat(Float64, (1, 2), (8, 9.0)) === (2,)
+    @test removeat(Nothing, (1, 2, 3), (nothing, 4, nothing)) === (2,)
+    @test removeat(Float64, (1, 2), (8, 9.0)) === (1,)
+    @test remove(Nothing, (1, nothing, 3)) === (1, 3)
+    @test keep(Int, (1, nothing, 3)) === (1, 3)
+end
+
+function test_globally_constant(ID::Type{<:AbstractInterpolationDimension};
+        args1 = (),
+        args2 = (),
+        kwargs1 = (),
+        kwargs2 = (),
+        cache = EmptyCache(),
+        test_derivatives = true
+)
     t1 = [-3.14, 1.0, 3.0, 7.6, 12.8]
     t2 = [-2.71, 1.41, 12.76, 50.2, 120.0]
 
@@ -21,7 +39,9 @@ function test_globally_constant(
     )
 
     itp = NDInterpolation(u, itp_dims; cache)
-    @test all(x -> isapprox(x, 2.0; atol = 1e-10), eval_grid(itp))
+
+    grid = eval_grid(itp)
+    @test all(x -> isapprox(x, 2.0; atol = 1e-10), grid)
     if test_derivatives
         @test all(
             x -> isapprox(x, 0.0; atol = 1e-10), eval_grid(itp, derivative_orders = (1, 0)))
@@ -34,7 +54,7 @@ function test_globally_constant(
         ID(t1, args1...; t_eval = t1[1:(end - 1)] + diff(t1) / 2, kwargs1...),
         ID(t2, args2...; t_eval = t2[1:(end - 1)] + diff(t2) / 2, kwargs2...)
     )
-    itp = NDInterpolation(u, itp_dims)
+    itp = NDInterpolation(u, itp_dims; cache)
     @test all(x -> isapprox(x, 2.0; atol = 1e-10), eval_grid(itp))
     if test_derivatives
         @test all(
@@ -44,15 +64,17 @@ function test_globally_constant(
     end
 end
 
-function test_analytic(itp::NDInterpolation{N_in}, f) where {N_in}
+function test_analytic(itp::NDInterpolation{<:Any, N_in}, f) where {N_in}
+    used_interp_dims = remove(NoInterpolationDimension, itp.interp_dims)
     # Evaluation in data points
-    ts = ntuple(dim_in -> itp.interp_dims[dim_in].t, N_in)
+    ts = map(d -> d.t, used_interp_dims)
     for t in Iterators.product(ts...)
         @test itp(t) ≈ f(t...)
     end
 
     # Evaluation between data points
     ts_ = ntuple(dim_in -> ts[dim_in][1:(end - 1)] + diff(ts[dim_in]) / 2, N_in)
+    t = first(Iterators.product(ts_...))
     for t in Iterators.product(ts_...)
         @test itp(t) ≈ f(t...)
     end
@@ -62,7 +84,6 @@ end
     test_globally_constant(LinearInterpolationDimension)
 
     f(t1, t2) = 3.0 + 2.3t1 - 4.7t2
-
     Random.seed!(1)
     t1 = cumsum(rand(10))
     t2 = cumsum(rand(10))
@@ -74,14 +95,24 @@ end
     u = f.(t1, t2')
     itp = NDInterpolation(u, itp_dims)
     test_analytic(itp, f)
+
+    itp_dims = (
+        NoInterpolationDimension(),
+        LinearInterpolationDimension(t2; t_eval = t2 ./ 2)
+    )
+    itp = NDInterpolation(u, itp_dims)
+    eval_grid(itp)
 end
 
 @testset "BSpline Interpolation" begin
-    test_globally_constant(
-        BSplineInterpolationDimension, args1 = (2,), args2 = (3,),
-        kwargs1 = (:max_derivative_order_eval => 1,),
-        kwargs2 = (:max_derivative_order_eval => 1,)
-    )
+    ID = BSplineInterpolationDimension
+    args1 = (2,)
+    args2 = (3,)
+    kwargs1 = (:max_derivative_order_eval => 1,)
+    kwargs2 = (:max_derivative_order_eval => 1,)
+    cache = EmptyCache()
+    test_derivatives = true
+    test_globally_constant(ID; args1, args2, kwargs1, kwargs2, cache, test_derivatives)
 
     f(t1, t2, t3) = t1^2 + t2^2 + t3^2
 
@@ -99,13 +130,14 @@ end
 @testset "NURBS Interpolation" begin
     Random.seed!(10)
 
-    test_globally_constant(
-        BSplineInterpolationDimension; args1 = (3,), args2 = (1,),
-        kwargs1 = (:max_derivative_order_eval => 1,),
-        kwargs2 = (:max_derivative_order_eval => 1,),
-        cache = NURBSWeights(rand(7, 5)),
-        test_derivatives = false
-    )
+    ID = BSplineInterpolationDimension
+    args1 = (3,)
+    args2 = (1,)
+    kwargs1 = (:max_derivative_order_eval => 1,)
+    kwargs2 = (:max_derivative_order_eval => 1,)
+    cache = NURBSWeights(rand(7, 5))
+    test_derivatives = false
+    test_globally_constant(ID; args1, args2, kwargs1, kwargs2, cache, test_derivatives)
 
     ## Circle representation
     # Knots
@@ -139,4 +171,18 @@ end
     points_on_circle = eachrow(out)
     @test allunique(points_on_circle[2:end])
     @test all(point -> point[1]^2 + point[2]^2 ≈ 1, points_on_circle)
+end
+
+@testset "Mixed Interpolation" begin
+    t2 = cumsum(rand(4))
+    t3 = collect(0:(π / 2):(2π))
+    u = ones(3, 4, 5)
+    itp_dims = (
+        NoInterpolationDimension(),
+        LinearInterpolationDimension(t2; t_eval = t2),
+        BSplineInterpolationDimension(t3, 1; t_eval = t3)
+    )
+    itp = NDInterpolation(u, itp_dims)
+    @test isapprox(itp(1.0, 4.0), [1.0, 1.0, 1.0])
+    eval_grid(itp)
 end
