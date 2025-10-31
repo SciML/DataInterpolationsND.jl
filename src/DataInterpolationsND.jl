@@ -67,7 +67,6 @@ include("interpolation_utils.jl")
 include("interpolation_methods.jl")
 include("interpolation_parallel.jl")
 include("plot_rec.jl")
-include("interp_array.jl")
 
 # Multiple `t` arguments to tuple (can these 2 be done in 1?)
 function (interp::NDInterpolation)(t_args::Vararg{Number}; kwargs...)
