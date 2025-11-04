@@ -33,10 +33,10 @@ struct NDInterpolation{
     interp_dims::D
     cache::gType
     function NDInterpolation(u::AbstractArray{<:Any, N}, interp_dims, cache) where {N}
+        @assert length(dims) <= N "The number of interpolation dimensions must no more than the dimensions of u."
         interp_dims = _add_trailing_interp_dims(interp_dims, Val{N}())
-        N_in = _count_interpolating_dims(interp_dims)
-        N_out = _count_noninterpolating_dims(interp_dims)
-        @assert N_out≥0 "The number of dimensions of u must be at least the number of interpolation dimensions."
+        N_in = count(remove(nointerpolationdimension, interp_dims))
+        N_out = count(keep(nointerpolationdimension, interp_dims))
         validate_size_u(interp_dims, u)
         validate_cache(cache, interp_dims, u)
         new{N, N_in, N_out, typeof(cache), typeof(interp_dims), typeof(u)}(
@@ -45,13 +45,6 @@ struct NDInterpolation{
     end
 end
 
-# TODO probably not type-stable (this needs to compile away completely)
-function _count_interpolating_dims(interp_dims)
-    count(map(d -> !(d isa NoInterpolationDimension), interp_dims))
-end
-function _count_noninterpolating_dims(interp_dims)
-    count(map(d -> d isa NoInterpolationDimension, interp_dims))
-end
 
 function _add_trailing_interp_dims(dim::AbstractInterpolationDimension, n)
     _add_trailing_interp_dims((dim,), n)
