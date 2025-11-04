@@ -1,5 +1,5 @@
 """
-    NoInterpolationDimensio
+    NoInterpolationDimension()
 
 A dimension that does not perform interpolation.
 """
