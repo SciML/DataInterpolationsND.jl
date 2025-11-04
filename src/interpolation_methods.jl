@@ -27,7 +27,7 @@ Base.@propagate_inbounds function _interpolate!(
         J = map(index, interp_dims, ts, idx, I)
         product = prod(map(getindex, coeffs, I))
 
-        if !(cache isa EmptyCache)
+        if cache isa NURBSWeights
             K = removeat(NoInterpolationDimension, J, interp_dims)
             product *= cache.weights[K...]
             denom += product
@@ -40,7 +40,7 @@ Base.@propagate_inbounds function _interpolate!(
         end
     end
 
-    if !(cache isa EmptyCache)
+    if cache isa NURBSWeights
         if out isa AbstractArray
             out ./= denom
         else
