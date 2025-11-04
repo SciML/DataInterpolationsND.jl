@@ -11,7 +11,7 @@ Base.@propagate_inbounds function _interpolate!(
     out,
     valid_derivative_orders = check_derivative_order(
         interp_dims, derivative_orders, ts, out)
-    valid_derivative_orders || return out
+    valid_derivative_orders || return out # Array was zeroed out in this case
     if isnothing(multi_point_index)
         multi_point_index = map(_ -> nothing, interp_dims)
     end
@@ -80,7 +80,8 @@ stencil(::NoInterpolationDimension) = 1
 stencil(d::BSplineInterpolationDimension) = 1:(d.degree + 1)
 
 # Precalculate coefficient/s
-function coefficients(d::LinearInterpolationDimension, derivative_order, multi_point_index, t, i)
+function coefficients(
+        d::LinearInterpolationDimension, derivative_order, multi_point_index, t, i)
     t₁ = d.t[i]
     t₂ = d.t[i + 1]
     t_vol_inv = inv(t₂ - t₁)
@@ -88,7 +89,10 @@ function coefficients(d::LinearInterpolationDimension, derivative_order, multi_p
     b = (iszero(derivative_order) ? t - t₁ : one(t)) * t_vol_inv
     return (a, b)
 end
-coefficients(::ConstantInterpolationDimension, derivative_order, multi_point_index, t, i) = true
+function coefficients(
+        ::ConstantInterpolationDimension, derivative_order, multi_point_index, t, i)
+    true
+end
 coefficients(::NoInterpolationDimension, derivative_order, multi_point_index, t, i) = true
 function coefficients(
         d::BSplineInterpolationDimension, derivative_order, multi_point_index, t, i)

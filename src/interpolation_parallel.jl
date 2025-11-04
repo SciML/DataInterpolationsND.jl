@@ -33,9 +33,9 @@ length for each interpolation dimension and the interpolation is evaluated at th
 """
 function eval_unstructured!(
         out::AbstractArray,
-        interp::NDInterpolation{N,N_in};
+        interp::NDInterpolation{N, N_in};
         derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
-) where {N,N_in}
+) where {N, N_in}
     validate_derivative_order(derivative_orders, interp; multi_point = true)
     backend = get_backend(out)
     no_interp_inds = map(_ -> Colon(), keep(NoInterpolationDimension, interp.interp_dims))
@@ -129,7 +129,7 @@ end
         A, # @Const(A), TODO: somehow this now hits a bug in KernelAbstractions where elsize is not defined for Const
         derivative_orders,
         no_interp_inds,
-        eval_grid,
+        eval_grid
 )
     (; interp_dims) = A
     N_out = length(keep(NoInterpolationDimension, interp_dims))
