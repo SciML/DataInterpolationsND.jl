@@ -56,7 +56,7 @@ end
 validate_size_u(interp_dims::Tuple, ax::Tuple) = map(validate_size_u, interp_dims, ax)
 validate_size_u(interp_dim::NoInterpolationDimension, ax::AbstractRange) = nothing
 function validate_size_u(interp_dim::AbstractInterpolationDimension, ax::AbstractRange)
-    @assert length(interp_dim)==length(ax) "For the first N_in dimensions of u the length must match the t of the corresponding interpolation dimension."
+    @assert length(interp_dim) == length(ax) "The size if `u` must match the t of the corresponding interpolation dimension. Got $interp_dim and $ax"
 end
 
 function validate_size_u(

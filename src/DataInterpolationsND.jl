@@ -90,14 +90,15 @@ function (interp::NDInterpolation{N, N_in, N_out})(
         t::Tuple{Vararg{Any, N_in}};
         derivative_orders::Tuple{Vararg{Integer, N_in}} = ntuple(_ -> 0, N_in)
 ) where {N, N_in, N_out}
-    validate_size_u(interp, out)
+    (; interp_dims, u) = interp
     # We need to add the NoInterpolationDimensions for all arguments to _interpolate.
     # Currently interp() accepts only the interpolating dimensions.
     # We could switch this so it needs indices for NoInterpolationDimension, but thats a breaking change.
-    t_all = insertat(NoInterpolationDimension, Colon(), t, interp.interp_dims)
-    idx_all = get_idx(interp.interp_dims, t_all)
-    d_o_all = insertat(NoInterpolationDimension, 0, derivative_orders, interp.interp_dims)
+    d_o_all = insertat(NoInterpolationDimension, 0, derivative_orders, interp_dims)
     validate_derivative_order(d_o_all, interp)
+    t_all = insertat(NoInterpolationDimension, Colon(), t, interp.interp_dims)
+    idx_all = get_idx(interp_dims, t_all)
+    @assert size(out) == keepat(NoInterpolationDimension, size(u), interp_dims) "The size of out must match the size of the NoInterpolationDimensions of u."
     multi_point_index = nothing
     return _interpolate!(out, interp, t_all, idx_all, d_o_all, multi_point_index)
 end

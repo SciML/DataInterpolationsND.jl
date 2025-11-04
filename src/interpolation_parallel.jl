@@ -33,19 +33,22 @@ length for each interpolation dimension and the interpolation is evaluated at th
 """
 function eval_unstructured!(
         out::AbstractArray,
-        interp::NDInterpolation{N_in};
+        interp::NDInterpolation{N,N_in};
         derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
-) where {N_in}
-    validate_derivative_orders(derivative_orders, interp; multi_point = true)
-    validate_output_size(out, interp)
+) where {N,N_in}
+    validate_derivative_order(derivative_orders, interp; multi_point = true)
     backend = get_backend(out)
-    # TODO this may be broken but it isn't tested
+    no_interp_inds = map(_ -> Colon(), keep(NoInterpolationDimension, interp.interp_dims))
     @assert all(d -> length(d.t_eval) == size(out, 1),
         remove(NoInterpolationDimension, interp.interp_dims)) "The t_eval of all interpolation dimensions must have the same length as the first dimension of out."
+    @assert size(out)[2:end]==get_output_size(interp) "The size of the last N_out dimensions of out must be the same as the output size of the interpolation."
+    eval_grid = false
     eval_kernel(backend)(
         out,
         interp,
         derivative_orders,
+        no_interp_inds,
+        eval_grid,
         ndrange = size(out, 1)
     )
     synchronize(backend)
@@ -85,19 +88,21 @@ in place.
 """
 function eval_grid!(
         out::AbstractArray,
-        interp::NDInterpolation{N, N_in};
-        derivative_orders::NTuple{N, <:Integer} = ntuple(_ -> 0, N)
-) where {N, N_in}
+        interp::NDInterpolation{N, N_in, N_out};
+        derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in),
+        no_interp_inds = map(_ -> Colon(), N_out)
+) where {N, N_in, N_out}
     validate_t_eval_lengths(out, interp)
     validate_output_size(out, interp)
     validate_derivative_order(derivative_orders, interp; multi_point = true)
     backend = get_backend(out)
-    no_interp_inds = map(_ -> Colon(), remove(NoInterpolationDimension, interp.interp_dims))
+    eval_grid = true
     eval_kernel(backend)(
         out,
         interp,
         derivative_orders,
         no_interp_inds,
+        eval_grid,
         ndrange = get_ndrange(interp)
     )
     synchronize(backend)
@@ -123,35 +128,47 @@ end
         out,
         A, # @Const(A), TODO: somehow this now hits a bug in KernelAbstractions where elsize is not defined for Const
         derivative_orders,
-        no_interp_inds
+        no_interp_inds,
+        eval_grid,
 )
-    N_out = length(keep(NoInterpolationDimension, A.interp_dims))
+    (; interp_dims) = A
+    N_out = length(keep(NoInterpolationDimension, interp_dims))
     I = @index(Global, NTuple)
-    k = insertat(NoInterpolationDimension, no_interp_inds, I, A.interp_dims)
+    d_o = insertat(NoInterpolationDimension, 0, derivative_orders, interp_dims)
 
-    t_eval = map(get_t_eval, A.interp_dims, k)
-    idx_eval = map(get_idx_eval, A.interp_dims, k)
+    # TODO eval_grid should be a static bool or Val so this branch can be deleted
+    if eval_grid
+        # Insert no_interp_inds in I
+        k = insertat(NoInterpolationDimension, no_interp_inds, I, interp_dims)
+    else # eval_unstructured
+        # The same index is used for all interp dimensions in eval_unstructured
+        I1 = map(_ -> only(I), remove(NoInterpolationDimension, interp_dims))
+        # Insert no_interp_inds in I1
+        k = insertat(NoInterpolationDimension, no_interp_inds, I1, interp_dims)
+    end
+    t_eval = map(get_t_eval, interp_dims, k)
+    idx_eval = map(get_idx_eval, interp_dims, k)
 
     if iszero(N_out)
         @inbounds out[k...] = _interpolate!(
-            make_out(A, t_eval), A, t_eval, idx_eval, derivative_orders, k)
+            make_out(A, t_eval), A, t_eval, idx_eval, d_o, k)
     else
         _interpolate!(
             view(out, k...),
-            A, t_eval, idx_eval, derivative_orders, k)
+            A, t_eval, idx_eval, d_o, k)
     end
 end
 
-get_t_eval(d::AbstractInterpolationDimension, i) = d.t_eval[i]
+get_t_eval(d::AbstractInterpolationDimension, i::Integer) = d.t_eval[i]
 get_t_eval(d::AbstractInterpolationDimension, i::Colon) = d.t_eval
 get_t_eval(d::AbstractInterpolationDimension, i::AbstractVector) = d.t_eval[i]
-get_t_eval(::NoInterpolationDimension, i) = nothing
+get_t_eval(::NoInterpolationDimension, i::Integer) = nothing
 get_t_eval(::NoInterpolationDimension, i::Colon) = nothing
 get_t_eval(::NoInterpolationDimension, i::AbstractVector) = nothing
 
-get_idx_eval(d::AbstractInterpolationDimension, i) = d.idx_eval[i]
+get_idx_eval(d::AbstractInterpolationDimension, i::Integer) = d.idx_eval[i]
 get_idx_eval(d::AbstractInterpolationDimension, i::AbstractVector) = d.idx_eval[i]
 get_idx_eval(d::AbstractInterpolationDimension, i::Colon) = d.idx_eval
-get_idx_eval(::NoInterpolationDimension, i) = i
+get_idx_eval(::NoInterpolationDimension, i::Integer) = i
 get_idx_eval(::NoInterpolationDimension, i::Colon) = i
 get_idx_eval(::NoInterpolationDimension, i::AbstractVector) = i
