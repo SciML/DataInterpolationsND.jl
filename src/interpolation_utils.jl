@@ -40,7 +40,7 @@ function validate_derivative_order_by_cache(::NURBSWeights, derivative_order)
     @assert derivative_order==0 "Currently partial derivatives of NURBS are not supported."
 end
 function validate_derivative_order_by_cache(::Any, derivative_order)
-    @assert derivative_order>=0 "Derivative orders must me non-negative."
+    @assert derivative_order>=0 "Derivative orders must be non-negative."
 end
 
 function validate_t(t)

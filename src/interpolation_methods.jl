@@ -19,14 +19,13 @@ Base.@propagate_inbounds function _interpolate!(
     # Setup
     out = make_zero!!(out) # TODO remove this
     stencils = map(stencil, interp_dims)
-    stencil_weights = map(
-        weights, interp_dims, derivative_orders, multi_point_index, ts, idx)
+    coeffs = map(coefficients, interp_dims, derivative_orders, multi_point_index, ts, idx)
     denom = zero(eltype(u))
 
     # TODO this can be a single unrolled broadcast rather than a loop of .+=
     for I in Iterators.product(stencils...)
         J = map(index, interp_dims, ts, idx, I)
-        product = prod(map(getindex, stencil_weights, I))
+        product = prod(map(getindex, coeffs, I))
 
         if !(cache isa EmptyCache)
             K = removeat(NoInterpolationDimension, J, interp_dims)
@@ -80,8 +79,8 @@ stencil(::ConstantInterpolationDimension) = 1
 stencil(::NoInterpolationDimension) = 1
 stencil(d::BSplineInterpolationDimension) = 1:(d.degree + 1)
 
-# Precalculate weights
-function weights(d::LinearInterpolationDimension, derivative_order, multi_point_index, t, i)
+# Precalculate coefficient/s
+function coefficients(d::LinearInterpolationDimension, derivative_order, multi_point_index, t, i)
     t₁ = d.t[i]
     t₂ = d.t[i + 1]
     t_vol_inv = inv(t₂ - t₁)
@@ -89,9 +88,9 @@ function weights(d::LinearInterpolationDimension, derivative_order, multi_point_
     b = (iszero(derivative_order) ? t - t₁ : one(t)) * t_vol_inv
     return (a, b)
 end
-weights(::ConstantInterpolationDimension, derivative_order, multi_point_index, t, i) = 1
-weights(::NoInterpolationDimension, derivative_order, multi_point_index, t, i) = 1
-function weights(
+coefficients(::ConstantInterpolationDimension, derivative_order, multi_point_index, t, i) = true
+coefficients(::NoInterpolationDimension, derivative_order, multi_point_index, t, i) = true
+function coefficients(
         d::BSplineInterpolationDimension, derivative_order, multi_point_index, t, i)
     get_basis_function_values(d, t, i, derivative_order, multi_point_index)
 end
