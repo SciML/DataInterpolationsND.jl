@@ -1,137 +1,106 @@
-function _interpolate!(
-        out,
-        A::NDInterpolation{N_in, N_out, ID},
-        t::Tuple{Vararg{Number, N_in}},
-        idx::NTuple{N_in, <:Integer},
-        derivative_orders::NTuple{N_in, <:Integer},
+Base.@propagate_inbounds function _interpolate!(
+        out::Union{Number, AbstractArray},
+        A::NDInterpolation{N},
+        ts::Tuple{Vararg{Any, N}},
+        idx::Tuple{Vararg{Any, N}},
+        derivative_orders::Tuple{Vararg{Any, N}},
         multi_point_index
-) where {N_in, N_out, ID <: LinearInterpolationDimension}
-    out = make_zero!!(out)
-    any(>(1), derivative_orders) && return out
+) where {N}
+    (; interp_dims, cache, u) = A
 
-    tᵢ = ntuple(i -> A.interp_dims[i].t[idx[i]], N_in)
-    tᵢ₊₁ = ntuple(i -> A.interp_dims[i].t[idx[i] + 1], N_in)
-
-    # Size of the (hyper)rectangle `t` is in
-    t_vol = one(eltype(tᵢ))
-    for (t₁, t₂) in zip(tᵢ, tᵢ₊₁)
-        t_vol *= t₂ - t₁
+    out,
+    valid_derivative_orders = check_derivative_order(
+        interp_dims, derivative_orders, ts, out)
+    valid_derivative_orders || return out # Array was zeroed out in this case
+    if isnothing(multi_point_index)
+        multi_point_index = map(_ -> nothing, interp_dims)
     end
 
-    # Loop over the corners of the (hyper)rectangle `t` is in
-    for I in Iterators.product(ntuple(i -> (false, true), N_in)...)
-        c = eltype(out)(inv(t_vol))
-        for (t_, right_point, d, t₁, t₂) in zip(t, I, derivative_orders, tᵢ, tᵢ₊₁)
-            c *= if right_point
-                iszero(d) ? t_ - t₁ : one(t_)
-            else
-                iszero(d) ? t₂ - t_ : -one(t_)
-            end
+    # Setup
+    out = make_zero!!(out) # TODO remove this
+    stencils = map(stencil, interp_dims)
+    coeffs = map(coefficients, interp_dims, derivative_orders, multi_point_index, ts, idx)
+    denom = zero(eltype(u))
+
+    # TODO this can be a single unrolled broadcast rather than a loop of .+=
+    for I in Iterators.product(stencils...)
+        J = map(index, interp_dims, ts, idx, I)
+        product = prod(map(getindex, coeffs, I))
+
+        if cache isa NURBSWeights
+            K = removeat(NoInterpolationDimension, J, interp_dims)
+            product *= cache.weights[K...]
+            denom += product
         end
-        J = (ntuple(i -> idx[i] + I[i], N_in)..., ..)
-        if iszero(N_out)
-            out += c * A.u[J...]
+
+        if out isa AbstractArray
+            out .+= product .* u[J...]
         else
-            @. out += c * A.u[J...]
+            out += product * u[J...]
         end
     end
+
+    if cache isa NURBSWeights
+        if out isa AbstractArray
+            out ./= denom
+        else
+            out /= denom
+        end
+    end
+
     return out
 end
 
-function _interpolate!(
-        out,
-        A::NDInterpolation{N_in, N_out, ID},
-        t::Tuple{Vararg{Number, N_in}},
-        idx::NTuple{N_in, <:Integer},
-        derivative_orders::NTuple{N_in, <:Integer},
-        multi_point_index
-) where {N_in, N_out, ID <: ConstantInterpolationDimension}
-    if any(>(0), derivative_orders)
-        return if any(i -> !isempty(searchsorted(A.interp_dims[i].t, t[i])), 1:N_in)
-            typed_nan(out)
-        else
-            out
-        end
+function check_derivative_order(dims::Tuple, derivative_orders::Tuple, ts::Tuple, out)
+    itr = map(tuple, dims, derivative_orders, ts)
+    # Fold over itr for all dims, combining out and valid
+    foldl(itr; init = (out, true)) do (acc_out, acc_valid), (d, d_o, t)
+        dim_out, dim_valid = check_derivative_order(d, d_o, t, acc_out)
+        dim_out, dim_valid & acc_valid
     end
-    idx = ntuple(
-        i -> t[i] >= A.interp_dims[i].t[end] ? length(A.interp_dims[i].t) : idx[i], N_in)
-    if iszero(N_out)
-        out = A.u[idx...]
+end
+check_derivative_order(::AbstractInterpolationDimension, d_o, t, out) = (out, true)
+check_derivative_order(::LinearInterpolationDimension, d_o, t, out) = (out, d_o <= 1)
+function check_derivative_order(d::ConstantInterpolationDimension, d_o, t, out)
+    if d_o > 0
+        # Check if t is on the boundary between constant steps and if so return nans
+        return if isempty(searchsorted(d.t, t))
+            (out, false)
+        else
+            (typed_nan(out), false)
+        end
     else
-        out .= A.u[idx...]
+        (out, true)
     end
-    return out
 end
 
-# BSpline evaluation
-function _interpolate!(
-        out,
-        A::NDInterpolation{N_in, N_out, ID},
-        t::Tuple{Vararg{Number, N_in}},
-        idx::NTuple{N_in, <:Integer},
-        derivative_orders::NTuple{N_in, <:Integer},
-        multi_point_index
-) where {N_in, N_out, ID <: BSplineInterpolationDimension}
-    (; interp_dims) = A
+stencil(::LinearInterpolationDimension) = (1, 2)
+stencil(::ConstantInterpolationDimension) = 1
+stencil(::NoInterpolationDimension) = 1
+stencil(d::BSplineInterpolationDimension) = 1:(d.degree + 1)
 
-    out = make_zero!!(out)
-    degrees = ntuple(dim_in -> interp_dims[dim_in].degree, N_in)
-    basis_function_vals = get_basis_function_values_all(
-        A, t, idx, derivative_orders, multi_point_index
-    )
-
-    for I in CartesianIndices(ntuple(dim_in -> 1:(degrees[dim_in] + 1), N_in))
-        B_product = prod(dim_in -> basis_function_vals[dim_in][I[dim_in]], 1:N_in)
-        cp_index = ntuple(
-            dim_in -> idx[dim_in] + I[dim_in] - degrees[dim_in] - 1, N_in)
-        if iszero(N_out)
-            out += B_product * A.u[cp_index...]
-        else
-            out .+= B_product * view(A.u, cp_index..., ..)
-        end
-    end
-
-    return out
+# Precalculate coefficient/s
+function coefficients(
+        d::LinearInterpolationDimension, derivative_order, multi_point_index, t, i)
+    t₁ = d.t[i]
+    t₂ = d.t[i + 1]
+    t_vol_inv = inv(t₂ - t₁)
+    a = (iszero(derivative_order) ? t₂ - t : -one(t)) * t_vol_inv
+    b = (iszero(derivative_order) ? t - t₁ : one(t)) * t_vol_inv
+    return (a, b)
+end
+function coefficients(
+        ::ConstantInterpolationDimension, derivative_order, multi_point_index, t, i)
+    true
+end
+coefficients(::NoInterpolationDimension, derivative_order, multi_point_index, t, i) = true
+function coefficients(
+        d::BSplineInterpolationDimension, derivative_order, multi_point_index, t, i)
+    get_basis_function_values(d, t, i, derivative_order, multi_point_index)
 end
 
-# NURBS evaluation
-function _interpolate!(
-        out,
-        A::NDInterpolation{N_in, N_out, ID, <:NURBSWeights},
-        t::Tuple{Vararg{Number, N_in}},
-        idx::NTuple{N_in, <:Integer},
-        derivative_orders::NTuple{N_in, <:Integer},
-        multi_point_index
-) where {N_in, N_out, ID <: BSplineInterpolationDimension}
-    (; interp_dims, cache) = A
-
-    out = make_zero!!(out)
-    degrees = ntuple(dim_in -> interp_dims[dim_in].degree, N_in)
-    basis_function_vals = get_basis_function_values_all(
-        A, t, idx, derivative_orders, multi_point_index
-    )
-
-    denom = zero(eltype(t))
-
-    for I in CartesianIndices(ntuple(dim_in -> 1:(degrees[dim_in] + 1), N_in))
-        B_product = prod(dim_in -> basis_function_vals[dim_in][I[dim_in]], 1:N_in)
-        cp_index = ntuple(
-            dim_in -> idx[dim_in] + I[dim_in] - degrees[dim_in] - 1, N_in)
-        weight = cache.weights[cp_index...]
-        product = weight * B_product
-        denom += product
-        if iszero(N_out)
-            out += product * A.u[cp_index...]
-        else
-            out .+= product * view(A.u, cp_index..., ..)
-        end
-    end
-
-    if iszero(N_out)
-        out /= denom
-    else
-        out ./= denom
-    end
-
-    return out
-end
+index(::LinearInterpolationDimension, t, idx, i) = idx + i - 1
+# TODO: this should happen outside of the loop
+index(d::ConstantInterpolationDimension, t, idx, i) = t >= d.t[end] ? length(d.t) : idx[i]
+index(::NoInterpolationDimension, t, idx, i) = idx
+index(d::BSplineInterpolationDimension, t, idx, i) = idx + i - d.degree - 1

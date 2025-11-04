@@ -1,4 +1,11 @@
 """
+    NoInterpolationDimension()
+
+A dimension that does not perform interpolation.
+"""
+struct NoInterpolationDimension <: AbstractInterpolationDimension end
+
+"""
     LinearInterpolationDimension(t; t_eval = similar(t, 0))
 
 Interpolation dimension for linear interpolation between the data points.
@@ -157,15 +164,9 @@ function BSplineInterpolationDimension(
     synchronize(backend)
 
     idx_eval = similar(t_eval, Int)
-    basis_function_eval = similar(
-        t_eval,
-        typeof(inv(one(eltype(t))) * inv(one(eltype(t_eval)))),
-        (
-            length(t_eval),
-            degree + 1,
-            max_derivative_order_eval + 1
-        )
-    )
+    T = typeof(inv(one(eltype(t))) * inv(one(eltype(t_eval))))
+    s = (length(t_eval), degree + 1, max_derivative_order_eval + 1)
+    basis_function_eval = similar(t_eval, T, s)
     itp_dim = BSplineInterpolationDimension(
         t, knots_all, t_eval, idx_eval, degree, max_derivative_order_eval,
         basis_function_eval, multiplicities)
