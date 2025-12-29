@@ -15,6 +15,7 @@ elseif GROUP == "Extensions"
     @safetestset "Symbolics Extension" include("test_symbolics_ext.jl")
 elseif GROUP == "QA"
     @safetestset "Aqua" include("aqua.jl")
+    @safetestset "ExplicitImports" include("explicit_imports.jl")
 elseif GROUP == "GPU"
     activate_gpu_env()
     # TODO: Add GPU tests

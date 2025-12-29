@@ -1,8 +1,9 @@
 module DataInterpolationsND
-using KernelAbstractions # Keep as dependency or make extension?
+using KernelAbstractions: KernelAbstractions, @Const, @index, @kernel, get_backend,
+                          synchronize
 using Adapt: @adapt_structure
-using EllipsisNotation
-using RecipesBase
+using EllipsisNotation: EllipsisNotation, (..)
+using RecipesBase: RecipesBase, @recipe, @series
 
 abstract type AbstractInterpolationDimension end
 abstract type AbstractInterpolationCache end
