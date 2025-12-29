@@ -96,4 +96,6 @@ export NDInterpolation, LinearInterpolationDimension, ConstantInterpolationDimen
        BSplineInterpolationDimension, NURBSWeights,
        eval_unstructured, eval_unstructured!, eval_grid, eval_grid!
 
+include("precompilation.jl")
+
 end # module DataInterpolationsND
