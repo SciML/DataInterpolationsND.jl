@@ -19,6 +19,7 @@ Adapt = "4.3.0"
 Aqua = "0.8"
 DataInterpolations = "8"
 EllipsisNotation = "1.8.0"
+ExplicitImports = "1.14.0"
 ForwardDiff = "0"
 KernelAbstractions = "0.9.34"
 Random = "1"
@@ -31,6 +32,7 @@ julia = "1"
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
+ExplicitImports = "7d51a73a-1435-4ff3-83d9-f097790105c7"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -40,4 +42,4 @@ Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Aqua", "DataInterpolations", "ForwardDiff", "Pkg", "Random", "SafeTestsets", "Symbolics", "Test", "SymbolicUtils"]
+test = ["Aqua", "DataInterpolations", "ExplicitImports", "ForwardDiff", "Pkg", "Random", "SafeTestsets", "Symbolics", "Test", "SymbolicUtils"]
