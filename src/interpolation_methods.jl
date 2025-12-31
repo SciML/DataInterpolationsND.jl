@@ -53,12 +53,14 @@ function _interpolate!(
             out
         end
     end
-    idx = ntuple(
-        i -> t[i] >= A.interp_dims[i].t[end] ? length(A.interp_dims[i].t) : idx[i], N_in)
+    # Use a new variable to avoid shadowing/capturing idx in the ntuple closure
+    idx_adjusted = ntuple(N_in) do i
+        t[i] >= A.interp_dims[i].t[end] ? length(A.interp_dims[i].t) : idx[i]
+    end
     if iszero(N_out)
-        out = A.u[idx...]
+        out = A.u[idx_adjusted...]
     else
-        out .= A.u[idx...]
+        out .= A.u[idx_adjusted...]
     end
     return out
 end
