@@ -5,7 +5,7 @@ function _interpolate!(
         idx::NTuple{N_in, <:Integer},
         derivative_orders::NTuple{N_in, <:Integer},
         multi_point_index
-) where {N_in, N_out, ID <: LinearInterpolationDimension}
+    ) where {N_in, N_out, ID <: LinearInterpolationDimension}
     out = make_zero!!(out)
     any(>(1), derivative_orders) && return out
 
@@ -45,7 +45,7 @@ function _interpolate!(
         idx::NTuple{N_in, <:Integer},
         derivative_orders::NTuple{N_in, <:Integer},
         multi_point_index
-) where {N_in, N_out, ID <: ConstantInterpolationDimension}
+    ) where {N_in, N_out, ID <: ConstantInterpolationDimension}
     if any(>(0), derivative_orders)
         return if any(i -> !isempty(searchsorted(A.interp_dims[i].t, t[i])), 1:N_in)
             typed_nan(out)
@@ -73,7 +73,7 @@ function _interpolate!(
         idx::NTuple{N_in, <:Integer},
         derivative_orders::NTuple{N_in, <:Integer},
         multi_point_index
-) where {N_in, N_out, ID <: BSplineInterpolationDimension}
+    ) where {N_in, N_out, ID <: BSplineInterpolationDimension}
     (; interp_dims) = A
 
     out = make_zero!!(out)
@@ -85,7 +85,8 @@ function _interpolate!(
     for I in CartesianIndices(ntuple(dim_in -> 1:(degrees[dim_in] + 1), N_in))
         B_product = prod(dim_in -> basis_function_vals[dim_in][I[dim_in]], 1:N_in)
         cp_index = ntuple(
-            dim_in -> idx[dim_in] + I[dim_in] - degrees[dim_in] - 1, N_in)
+            dim_in -> idx[dim_in] + I[dim_in] - degrees[dim_in] - 1, N_in
+        )
         if iszero(N_out)
             out += B_product * A.u[cp_index...]
         else
@@ -104,7 +105,7 @@ function _interpolate!(
         idx::NTuple{N_in, <:Integer},
         derivative_orders::NTuple{N_in, <:Integer},
         multi_point_index
-) where {N_in, N_out, ID <: BSplineInterpolationDimension}
+    ) where {N_in, N_out, ID <: BSplineInterpolationDimension}
     (; interp_dims, cache) = A
 
     out = make_zero!!(out)
@@ -118,7 +119,8 @@ function _interpolate!(
     for I in CartesianIndices(ntuple(dim_in -> 1:(degrees[dim_in] + 1), N_in))
         B_product = prod(dim_in -> basis_function_vals[dim_in][I[dim_in]], 1:N_in)
         cp_index = ntuple(
-            dim_in -> idx[dim_in] + I[dim_in] - degrees[dim_in] - 1, N_in)
+            dim_in -> idx[dim_in] + I[dim_in] - degrees[dim_in] - 1, N_in
+        )
         weight = cache.weights[cp_index...]
         product = weight * B_product
         denom += product

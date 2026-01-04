@@ -36,7 +36,8 @@ using Test
         @test eltype(itp_dim.knots_all) == BigFloat
 
         itp_dim_eval = BSplineInterpolationDimension(
-            t, 2; t_eval = t_eval, max_derivative_order_eval = 1)
+            t, 2; t_eval = t_eval, max_derivative_order_eval = 1
+        )
         @test eltype(itp_dim_eval.t_eval) == BigFloat
         @test eltype(itp_dim_eval.basis_function_eval) <: BigFloat
     end
@@ -48,7 +49,7 @@ using Test
 
         itp_dims = (
             LinearInterpolationDimension(t1),
-            LinearInterpolationDimension(t2)
+            LinearInterpolationDimension(t2),
         )
         itp = NDInterpolation(u, itp_dims)
 
@@ -68,7 +69,7 @@ using Test
 
         itp_dims = (
             ConstantInterpolationDimension(t1),
-            ConstantInterpolationDimension(t2)
+            ConstantInterpolationDimension(t2),
         )
         itp = NDInterpolation(u, itp_dims)
 
@@ -84,7 +85,7 @@ using Test
 
         itp_dims = (
             BSplineInterpolationDimension(t, 2),
-            BSplineInterpolationDimension(t, 2)
+            BSplineInterpolationDimension(t, 2),
         )
         itp = NDInterpolation(u, itp_dims)
 
@@ -114,7 +115,7 @@ using Test
 
         itp_dims = (
             LinearInterpolationDimension(t1; t_eval = t1_eval),
-            LinearInterpolationDimension(t2; t_eval = t2_eval)
+            LinearInterpolationDimension(t2; t_eval = t2_eval),
         )
         itp = NDInterpolation(u, itp_dims)
 
@@ -130,7 +131,7 @@ using Test
 
         itp_dims = (
             LinearInterpolationDimension(t1),
-            LinearInterpolationDimension(t2)
+            LinearInterpolationDimension(t2),
         )
         itp = NDInterpolation(u, itp_dims)
 
@@ -148,7 +149,7 @@ end
 
         itp_dims = (
             LinearInterpolationDimension(t1),
-            LinearInterpolationDimension(t2)
+            LinearInterpolationDimension(t2),
         )
         itp = NDInterpolation(u, itp_dims)
 
@@ -170,7 +171,7 @@ end
 
         itp_dims = (
             LinearInterpolationDimension(t1; t_eval = t1_eval),
-            LinearInterpolationDimension(t2; t_eval = t2_eval)
+            LinearInterpolationDimension(t2; t_eval = t2_eval),
         )
         itp = NDInterpolation(u, itp_dims)
 
@@ -187,7 +188,7 @@ end
 
         itp_dims = (
             LinearInterpolationDimension(t1),
-            LinearInterpolationDimension(t2)
+            LinearInterpolationDimension(t2),
         )
         itp = NDInterpolation(u, itp_dims)
 
