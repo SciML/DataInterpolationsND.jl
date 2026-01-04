@@ -1,6 +1,6 @@
 module DataInterpolationsND
 using KernelAbstractions: KernelAbstractions, @Const, @index, @kernel, get_backend,
-                          synchronize
+    synchronize
 using Adapt: @adapt_structure
 using EllipsisNotation: EllipsisNotation, (..)
 using RecipesBase: RecipesBase, @recipe, @series
@@ -27,11 +27,11 @@ the size of `u` along that dimension must match the length of `t` of the corresp
   - `cache`: Optional global cache
 """
 struct NDInterpolation{
-    N_in, N_out,
-    ID <: AbstractInterpolationDimension,
-    gType <: AbstractInterpolationCache,
-    uType <: AbstractArray
-}
+        N_in, N_out,
+        ID <: AbstractInterpolationDimension,
+        gType <: AbstractInterpolationCache,
+        uType <: AbstractArray,
+    }
     u::uType
     interp_dims::NTuple{N_in, ID}
     cache::gType
@@ -41,10 +41,10 @@ struct NDInterpolation{
         end
         N_in = length(interp_dims)
         N_out = ndims(u) - N_in
-        @assert N_out≥0 "The number of dimensions of u must be at least the number of interpolation dimensions."
+        @assert N_out ≥ 0 "The number of dimensions of u must be at least the number of interpolation dimensions."
         validate_size_u(interp_dims, u)
         validate_cache(cache, interp_dims, u)
-        new{N_in, N_out, eltype(interp_dims), typeof(cache), typeof(u)}(
+        return new{N_in, N_out, eltype(interp_dims), typeof(cache), typeof(u)}(
             u, interp_dims, cache
         )
     end
@@ -52,7 +52,7 @@ end
 
 # Constructor with optional global cache
 function NDInterpolation(u, interp_dims; cache = EmptyCache())
-    NDInterpolation(u, interp_dims, cache)
+    return NDInterpolation(u, interp_dims, cache)
 end
 
 @adapt_structure NDInterpolation
@@ -66,12 +66,13 @@ include("plot_rec.jl")
 
 # Multiple `t` arguments to tuple (can these 2 be done in 1?)
 function (interp::NDInterpolation)(t_args::Vararg{Number}; kwargs...)
-    interp(t_args; kwargs...)
+    return interp(t_args; kwargs...)
 end
 
 function (interp::NDInterpolation)(
-        out::AbstractArray, t_args::Vararg{Number}; kwargs...)
-    interp(out, t_args; kwargs...)
+        out::AbstractArray, t_args::Vararg{Number}; kwargs...
+    )
+    return interp(out, t_args; kwargs...)
 end
 
 # In place single input evaluation
@@ -79,22 +80,22 @@ function (interp::NDInterpolation{N_in})(
         out::Union{Number, AbstractArray{<:Number}},
         t::Tuple{Vararg{Number, N_in}};
         derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
-) where {N_in}
+    ) where {N_in}
     validate_derivative_orders(derivative_orders, interp)
     idx = get_idx(interp.interp_dims, t)
-    @assert size(out)==size(interp.u)[(N_in + 1):end] "The size of out must match the size of the last N_out dimensions of u."
-    _interpolate!(out, interp, t, idx, derivative_orders, nothing)
+    @assert size(out) == size(interp.u)[(N_in + 1):end] "The size of out must match the size of the last N_out dimensions of u."
+    return _interpolate!(out, interp, t, idx, derivative_orders, nothing)
 end
 
 # Out of place single input evaluation
 function (interp::NDInterpolation)(t::Tuple{Vararg{Number}}; kwargs...)
     out = make_out(interp, t)
-    interp(out, t; kwargs...)
+    return interp(out, t; kwargs...)
 end
 
 export NDInterpolation, LinearInterpolationDimension, ConstantInterpolationDimension,
-       BSplineInterpolationDimension, NURBSWeights,
-       eval_unstructured, eval_unstructured!, eval_grid, eval_grid!
+    BSplineInterpolationDimension, NURBSWeights,
+    eval_unstructured, eval_unstructured!, eval_grid, eval_grid!
 
 include("precompilation.jl")
 

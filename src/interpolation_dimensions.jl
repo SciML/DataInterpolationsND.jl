@@ -13,16 +13,16 @@ Interpolation dimension for linear interpolation between the data points.
     see `eval_unstructured` and `eval_grid`. Defaults to no points.
 """
 struct LinearInterpolationDimension{
-    tType <: AbstractVector{<:Number},
-    t_evalType <: AbstractVector{<:Number},
-    idxType <: AbstractVector{<:Integer}
-} <: AbstractInterpolationDimension
+        tType <: AbstractVector{<:Number},
+        t_evalType <: AbstractVector{<:Number},
+        idxType <: AbstractVector{<:Integer},
+    } <: AbstractInterpolationDimension
     t::tType
     t_eval::t_evalType
     idx_eval::idxType
     function LinearInterpolationDimension(t, t_eval, idx_eval)
         validate_t(t)
-        new{typeof(t), typeof(t_eval), typeof(idx_eval)}(t, t_eval, idx_eval)
+        return new{typeof(t), typeof(t_eval), typeof(idx_eval)}(t, t_eval, idx_eval)
     end
 end
 
@@ -34,7 +34,7 @@ function LinearInterpolationDimension(t; t_eval = similar(t, 0))
         t, t_eval, idx_eval
     )
     set_eval_idx!(itp_dim)
-    itp_dim
+    return itp_dim
 end
 
 """
@@ -53,17 +53,17 @@ Interpolation dimension for constant interpolation between the data points.
     see `eval_unstructured` and `eval_grid`. Defaults to no points.
 """
 struct ConstantInterpolationDimension{
-    tType <: AbstractVector{<:Number},
-    t_evalType <: AbstractVector{<:Number},
-    idxType <: AbstractVector{<:Integer}
-} <: AbstractInterpolationDimension
+        tType <: AbstractVector{<:Number},
+        t_evalType <: AbstractVector{<:Number},
+        idxType <: AbstractVector{<:Integer},
+    } <: AbstractInterpolationDimension
     t::tType
     left::Bool
     t_eval::t_evalType
     idx_eval::idxType
     function ConstantInterpolationDimension(t, left, t_eval, idx_eval)
         validate_t(t)
-        new{typeof(t), typeof(t_eval), typeof(idx_eval)}(
+        return new{typeof(t), typeof(t_eval), typeof(idx_eval)}(
             t, left, t_eval, idx_eval
         )
     end
@@ -77,7 +77,7 @@ function ConstantInterpolationDimension(t; left = true, t_eval = similar(t, 0))
         t, left, t_eval, idx_eval
     )
     set_eval_idx!(itp_dim)
-    itp_dim
+    return itp_dim
 end
 
 """
@@ -104,12 +104,12 @@ the BSpline basis functions.
   - `multiplicities`: The multiplicities of the knots `t`. Defaults to multiplicities for an open/clamped knot vector.
 """
 struct BSplineInterpolationDimension{
-    tType <: AbstractVector{<:Number},
-    t_evalType <: AbstractVector{<:Number},
-    idxType <: AbstractVector{<:Integer},
-    evalType <: AbstractArray{<:Number, 3},
-    mType <: AbstractVector{<:Integer}
-} <: AbstractInterpolationDimension
+        tType <: AbstractVector{<:Number},
+        t_evalType <: AbstractVector{<:Number},
+        idxType <: AbstractVector{<:Integer},
+        evalType <: AbstractArray{<:Number, 3},
+        mType <: AbstractVector{<:Integer},
+    } <: AbstractInterpolationDimension
     t::tType
     knots_all::tType
     t_eval::t_evalType
@@ -120,12 +120,16 @@ struct BSplineInterpolationDimension{
     multiplicities::mType
     function BSplineInterpolationDimension(
             t, knots_all, t_eval, idx_eval, degree, max_derivative_order_eval,
-            basis_function_eval, multiplicities)
+            basis_function_eval, multiplicities
+        )
         validate_t(t)
-        new{typeof(t), typeof(t_eval), typeof(idx_eval),
-            typeof(basis_function_eval), typeof(multiplicities)}(
+        return new{
+            typeof(t), typeof(t_eval), typeof(idx_eval),
+            typeof(basis_function_eval), typeof(multiplicities),
+        }(
             t, knots_all, t_eval, idx_eval, degree, max_derivative_order_eval,
-            basis_function_eval, multiplicities)
+            basis_function_eval, multiplicities
+        )
     end
 end
 
@@ -136,14 +140,14 @@ function BSplineInterpolationDimension(
         t_eval = similar(t, 0),
         max_derivative_order_eval::Integer = 0,
         multiplicities::Union{AbstractVector{<:Integer}, Nothing} = nothing
-)
+    )
     if isnothing(multiplicities)
         # Multiplicities for open/clamped knot vector if no multiplicities are provided
         multiplicities = similar(t, Int)
         multiplicities .= 1
         multiplicities[[1, length(multiplicities)]] .= degree + 1
     end
-    @assert length(multiplicities)==length(t) "There must be the same amount of knots (points in t) as multiplicities."
+    @assert length(multiplicities) == length(t) "There must be the same amount of knots (points in t) as multiplicities."
     @assert all(m -> 1 ≤ m ≤ (degree + 1), multiplicities) "All multiplicities must be between 1 and degree + 1."
 
     knots_all = similar(t, sum(multiplicities))
@@ -163,13 +167,14 @@ function BSplineInterpolationDimension(
         (
             length(t_eval),
             degree + 1,
-            max_derivative_order_eval + 1
+            max_derivative_order_eval + 1,
         )
     )
     itp_dim = BSplineInterpolationDimension(
         t, knots_all, t_eval, idx_eval, degree, max_derivative_order_eval,
-        basis_function_eval, multiplicities)
+        basis_function_eval, multiplicities
+    )
     set_eval_idx!(itp_dim)
     set_basis_function_eval!(itp_dim)
-    itp_dim
+    return itp_dim
 end
