@@ -7,6 +7,12 @@ function activate_gpu_env()
     return Pkg.instantiate()
 end
 
+function activate_qa_env()
+    Pkg.activate("qa")
+    Pkg.develop(PackageSpec(path = dirname(@__DIR__)))
+    return Pkg.instantiate()
+end
+
 if GROUP == "All" || GROUP == "Core"
     @safetestset "Interpolations" include("test_interpolations.jl")
     @safetestset "Derivatives" include("test_derivatives.jl")
@@ -15,9 +21,8 @@ if GROUP == "All" || GROUP == "Core"
 elseif GROUP == "Extensions"
     @safetestset "Symbolics Extension" include("test_symbolics_ext.jl")
 elseif GROUP == "QA"
-    @safetestset "Aqua" include("aqua.jl")
-    @safetestset "ExplicitImports" include("explicit_imports.jl")
-    @safetestset "JET" include("jet.jl")
+    activate_qa_env()
+    include("qa/runtests.jl")
 elseif GROUP == "GPU"
     activate_gpu_env()
     # TODO: Add GPU tests

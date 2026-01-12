@@ -63,40 +63,54 @@ end
 # The trailing zero is just a convenience for the algorithm and is removed in the output
 function get_basis_function_values(
         itp_dim::BSplineInterpolationDimension,
-        t::Number,
+        t::T_t,
         idx::Integer,
         derivative_order::Integer,
         multi_point_index::Nothing,
         dim_in::Integer
-    )
+    ) where {T_t <: Number}
     (; degree, knots_all) = itp_dim
-    T = promote_type(typeof(t), eltype(itp_dim.basis_function_eval))
+    T_eval = eltype(itp_dim.basis_function_eval)
+    # Use a concrete zero value for type stability
+    _zero = zero(promote_type(T_t, T_eval))
+    _one = one(promote_type(T_t, T_eval))
     degree_plus_1 = degree + 1
 
     if derivative_order > degree
-        return ntuple(_ -> zero(T), degree_plus_1)
+        return ntuple(_ -> _zero, degree_plus_1)
     end
 
     degree_plus_2 = degree + 2
 
     # Degree 0 basis function values
     basis_function_values = ntuple(
-        k -> (k == degree_plus_1) ? one(T) : zero(T),
+        k -> (k == degree_plus_1) ? _one : _zero,
         degree_plus_2
     )
 
     # Higher order basis function values
+    # Use a helper function to avoid capturing mutable variables in closures
+    basis_function_values = _compute_basis_function_values(
+        basis_function_values, knots_all, t, idx, degree, derivative_order, degree_plus_2
+    )
+
+    return basis_function_values[1:degree_plus_1]
+end
+
+# Helper function to avoid type instability from captured variables in closures
+function _compute_basis_function_values(
+        basis_function_values, knots_all, t, idx, degree, derivative_order, degree_plus_2
+    )
     for d in 1:degree
         deriv = d > degree - derivative_order
+        # Create a local copy for the closure to capture
+        bfv = basis_function_values
         basis_function_values = ntuple(
-            k -> cox_de_boor(
-                basis_function_values, knots_all, t, idx, degree, d, k, deriv
-            ),
+            k -> cox_de_boor(bfv, knots_all, t, idx, degree, d, k, deriv),
             degree_plus_2
         )
     end
-
-    return basis_function_values[1:degree_plus_1]
+    return basis_function_values
 end
 
 # Get the basis function values for one point in an
