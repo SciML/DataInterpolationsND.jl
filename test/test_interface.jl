@@ -196,3 +196,69 @@ end
         @test result isa Float64  # Promoted to Float64 due to u
     end
 end
+
+@testset "eval_unstructured Multi-Dimensional BSpline" begin
+    # Test eval_unstructured for multi-dimensional BSpline interpolation
+    # This is a regression test for proper multi_point_index handling
+    @testset "BSpline 2D eval_unstructured" begin
+        t1 = [-3.14, 1.0, 3.0, 7.6, 12.8]
+        t2 = [-2.71, 1.41, 12.76, 50.2, 120.0]
+        t1_eval = t1[1:(end - 1)] + diff(t1) / 2
+        t2_eval = t2[1:(end - 1)] + diff(t2) / 2
+
+        u_bspline = fill(2.0, 6, 7)
+        itp_bspline = NDInterpolation(
+            u_bspline,
+            (BSplineInterpolationDimension(t1, 2; t_eval = t1_eval,
+                    max_derivative_order_eval = 1),
+                BSplineInterpolationDimension(t2, 3; t_eval = t2_eval,
+                    max_derivative_order_eval = 1))
+        )
+
+        result = eval_unstructured(itp_bspline)
+        @test size(result) == (4,)
+        # For constant data, result should be approximately constant
+        @test all(x -> isapprox(x, 2.0; atol = 1e-10), result)
+
+        # Test with derivatives
+        result_deriv = eval_unstructured(itp_bspline; derivative_orders = (1, 0))
+        @test size(result_deriv) == (4,)
+    end
+
+    @testset "BSpline eval_unstructured with BigFloat" begin
+        t = BigFloat[1.0, 2.0, 3.0, 4.0, 5.0]
+        t_eval = BigFloat[1.5, 2.5, 3.5, 4.5]
+        itp_dim = BSplineInterpolationDimension(t, 2; t_eval = t_eval)
+        n_basis = DataInterpolationsND.get_n_basis_functions(itp_dim)
+        u = fill(BigFloat(3.0), n_basis, n_basis)
+
+        itp_dims = (
+            BSplineInterpolationDimension(t, 2; t_eval = t_eval),
+            BSplineInterpolationDimension(t, 2; t_eval = t_eval)
+        )
+        itp = NDInterpolation(u, itp_dims)
+
+        result = eval_unstructured(itp)
+        @test eltype(result) == BigFloat
+        @test size(result) == (4,)
+        @test all(x -> isapprox(x, BigFloat(3.0); atol = BigFloat(1e-10)), result)
+    end
+
+    @testset "NURBS eval_unstructured" begin
+        t_nurbs = collect(0:(π / 2):(2π))
+        t_eval_nurbs = collect(range(0, 2π, length = 100))
+        multiplicities = [3, 2, 2, 2, 3]
+        u_nurbs = Float64[1 0; 1 1; 0 1; -1 1; -1 0; -1 -1; 0 -1; 1 -1; 1 0]
+        weights = ones(9)
+        weights[2:2:end] ./= sqrt(2)
+        itp_nurbs = NDInterpolation(u_nurbs,
+            (BSplineInterpolationDimension(t_nurbs, 2;
+                multiplicities = multiplicities, t_eval = t_eval_nurbs),);
+            cache = NURBSWeights(weights))
+
+        result = eval_unstructured(itp_nurbs)
+        @test size(result) == (100, 2)
+        # Points should be on unit circle
+        @test all(row -> isapprox(row[1]^2 + row[2]^2, 1.0; atol = 1e-10), eachrow(result))
+    end
+end
