@@ -1,6 +1,6 @@
 name = "DataInterpolationsND"
 uuid = "4f1ef021-621a-47a5-ac8a-95402a2d1ea8"
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
