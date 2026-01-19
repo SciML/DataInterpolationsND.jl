@@ -3,7 +3,8 @@ module DataInterpolationsNDSymbolicsExt
 import DataInterpolationsND
 using DataInterpolationsND: NDInterpolation
 using Symbolics
-using Symbolics: Num, unwrap, SymbolicUtils, Symbolic
+using Symbolics: Num, unwrap
+import SymbolicUtils
 
 struct DifferentiatedNDInterpolation{N_in, N_out, I <: NDInterpolation{N_in, N_out}}
     interp::I
@@ -17,7 +18,7 @@ end
 Base.nameof(::NDInterpolation) = :NDInterpolation
 Base.nameof(::DifferentiatedNDInterpolation) = :DifferentiatedNDInterpolation
 
-for symT in [Num, Symbolic{<:Real}]
+for symT in [Num, SymbolicUtils.BasicSymbolic{<:Real}]
     @eval function (interp::NDInterpolation{N_in, N_out})(
             t::Vararg{
                 $symT, N_in,
