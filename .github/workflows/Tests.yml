@@ -41,6 +41,7 @@ jobs:
             version: "pre"
     uses: "SciML/.github/.github/workflows/tests.yml@v1"
     with:
+      group: "${{ matrix.group }}"
       julia-version: "${{ matrix.version }}"
       os: "${{ matrix.os }}"
     secrets: "inherit"
