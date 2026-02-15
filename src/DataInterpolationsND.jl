@@ -13,13 +13,13 @@ struct EmptyCache <: AbstractInterpolationCache end
 """
     NDInterpolation(u, interp_dims; cache = EmptyCache())
 
-The interpolation object containing the interpolation dimensions and the data to interpolate `u`.
-Given the number of interpolation dimensions `N_in`, for first `N_in` dimensions of `u`
-the size of `u` along that dimension must match the length of `t` of the corresponding interpolation dimension.
+The interpolation object containing the interpolation dimensions and the data to be interpolated `u`.
+For non-trivial interpolation dimensions (i.e. not `NoInterpolationDimension`) the length of its `t` must match
+the size of `u` along the corresponding dimension.
 
 ## Arguments
 
-  - `interp_dims`: A tuple of identically typed interpolation dimensions.
+  - `interp_dims`: A tuple of interpolation dimensions of length `≤ ndims(u)`.
   - `u`: The array to be interpolated.
 
 ## Keyword Arguments
