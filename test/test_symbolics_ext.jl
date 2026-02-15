@@ -1,6 +1,20 @@
 @testitem "Basics" begin
-    include("utils.jl")
-    interp = get_interp()
+    println("foo")
+    using Symbolics
+    using Symbolics: unwrap
+    import SymbolicUtils as SU
+
+    t1 = cumsum(rand(5))
+    t2 = cumsum(rand(7))
+
+    interpolation_dimensions = (
+        LinearInterpolationDimension(t1),
+        LinearInterpolationDimension(t2),
+    )
+
+    u = rand(5, 7, 2)
+    interp = NDInterpolation(u, interpolation_dimensions)
+
     @variables x y
 
     ex = interp(x, y)
@@ -22,8 +36,20 @@
 end
 
 @testitem "Differentiation" begin
-    include("utils.jl")
-    interp = get_interp()
+    using Symbolics
+    import SymbolicUtils as SU
+
+    t1 = cumsum(rand(5))
+    t2 = cumsum(rand(7))
+
+    interpolation_dimensions = (
+        LinearInterpolationDimension(t1),
+        LinearInterpolationDimension(t2),
+    )
+
+    u = rand(5, 7, 2)
+    interp = NDInterpolation(u, interpolation_dimensions)
+
     @variables x y
 
     ex = interp(x, y)
@@ -37,7 +63,7 @@ end
             end
         end
     )
-    @test res ≈ interp(0.4, 0.8; derivative_orders = (1, 0))[1]
+    @test res ≈ interp(0.4, 0.8; derivative_orders=(1, 0))[1]
 
     der = Symbolics.derivative(ex[1], y)
     @test size(der) == ()
@@ -49,5 +75,5 @@ end
             end
         end
     )
-    @test res ≈ interp(0.4, 0.8; derivative_orders = (0, 1))[1]
+    @test res ≈ interp(0.4, 0.8; derivative_orders=(0, 1))[1]
 end

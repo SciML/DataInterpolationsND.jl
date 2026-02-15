@@ -65,21 +65,3 @@ function test_analytic(itp::NDInterpolation{N_in}, f) where {N_in}
     end
     return
 end
-
-###
-#### Symbolics
-###
-
-function get_interp()
-    t1 = cumsum(rand(5))
-    t2 = cumsum(rand(7))
-
-    interpolation_dimensions = (
-        LinearInterpolationDimension(t1),
-        LinearInterpolationDimension(t2),
-    )
-
-    u = rand(5, 7, 2)
-
-    return NDInterpolation(u, interpolation_dimensions)
-end
