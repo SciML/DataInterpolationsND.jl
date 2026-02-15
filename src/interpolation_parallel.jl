@@ -14,7 +14,7 @@ length for each interpolation dimension and the interpolation is evaluated at th
 function eval_unstructured(interp::NDInterpolation; kwargs...)
     n_points = length(first(interp.interp_dims).t_eval)
     out = similar(interp.u, (n_points, get_output_size(interp)...))
-    eval_unstructured!(out, interp; kwargs...)
+    return eval_unstructured!(out, interp; kwargs...)
 end
 
 """
@@ -35,13 +35,17 @@ function eval_unstructured!(
         out::AbstractArray,
         interp::NDInterpolation{N, N_in};
         derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
-) where {N, N_in}
+    ) where {N, N_in}
     validate_derivative_order(derivative_orders, interp; multi_point = true)
     backend = get_backend(out)
     no_interp_inds = map(_ -> Colon(), keep(NoInterpolationDimension, interp.interp_dims))
-    @assert all(d -> length(d.t_eval) == size(out, 1),
-        remove(NoInterpolationDimension, interp.interp_dims)) "The t_eval of all interpolation dimensions must have the same length as the first dimension of out."
-    @assert size(out)[2:end]==get_output_size(interp) "The size of the last N_out dimensions of out must be the same as the output size of the interpolation."
+    @assert all(
+        d -> length(d.t_eval) == size(out, 1),
+        remove(NoInterpolationDimension, interp.interp_dims)
+    ) "The t_eval of all interpolation dimensions must have the same length as the first dimension of out."
+    # TODO: This also must be generalized: The shape of out must correspond to the size of the NonInterpolationDimension dimensions,
+    # assuming 'not indexing them'
+    @assert size(out)[2:end] == get_output_size(interp) "The size of the last N_out dimensions of out must be the same as the output size of the interpolation."
     eval_grid = false
     eval_kernel(backend)(
         out,
@@ -91,7 +95,7 @@ function eval_grid!(
         interp::NDInterpolation{N, N_in, N_out};
         derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in),
         no_interp_inds = map(_ -> Colon(), N_out)
-) where {N, N_in, N_out}
+    ) where {N, N_in, N_out}
     validate_t_eval_lengths(out, interp)
     validate_output_size(out, interp)
     validate_derivative_order(derivative_orders, interp; multi_point = true)
@@ -113,14 +117,15 @@ function validate_t_eval_lengths(out, interp)
     (; interp_dims) = interp
     interp_sizes = removeat(NoInterpolationDimension, size(out), interp_dims)
     interp_t_eval_lengths = map(
-        d -> length(d.t_eval), remove(NoInterpolationDimension, interp_dims))
-    all(map(==, interp_sizes, interp_t_eval_lengths)) ||
+        d -> length(d.t_eval), remove(NoInterpolationDimension, interp_dims)
+    )
+    return all(map(==, interp_sizes, interp_t_eval_lengths)) ||
         throw(ArgumentError("The length must match the t_eval of the corresponding interpolation dimension."))
 end
 
 function validate_output_size(out, interp)
-    keepat(NoInterpolationDimension, size(out), interp.interp_dims) ==
-    get_output_size(interp) ||
+    return keepat(NoInterpolationDimension, size(out), interp.interp_dims) ==
+        get_output_size(interp) ||
         throw(ArumentError("The size of the NoInterpolationDimension dimensions of `out` must be the same as the output size of the interpolation."))
 end
 
@@ -130,7 +135,7 @@ end
         derivative_orders,
         no_interp_inds,
         eval_grid
-)
+    )
     (; interp_dims) = A
     N_out = length(keep(NoInterpolationDimension, interp_dims))
     I = @index(Global, NTuple)
@@ -151,11 +156,13 @@ end
 
     if iszero(N_out)
         @inbounds out[k...] = _interpolate!(
-            make_out(A, t_eval), A, t_eval, idx_eval, d_o, k)
+            make_out(A, t_eval), A, t_eval, idx_eval, d_o, k
+        )
     else
         _interpolate!(
             view(out, k...),
-            A, t_eval, idx_eval, d_o, k)
+            A, t_eval, idx_eval, d_o, k
+        )
     end
 end
 

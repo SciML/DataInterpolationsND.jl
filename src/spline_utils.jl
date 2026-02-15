@@ -2,7 +2,7 @@
         knots_all,
         @Const(knot_values),
         @Const(multiplicities)
-)
+    )
     i = @index(Global, Linear)
     knot_value = knot_values[i]
 
@@ -23,9 +23,9 @@ safe_div(a, b) = iszero(b) ? zero(promote_type(typeof(a), typeof(b))) : a / b
 
 function cox_de_boor(
         basis_function_values, knots_all, t, idx, degree, d, k, deriv
-)
+    )
     T = eltype(basis_function_values)
-    if (k ≤ degree - d) || (k == degree + 2)
+    return if (k ≤ degree - d) || (k == degree + 2)
         zero(T)
     else
         i = idx + k - degree - 1
@@ -34,11 +34,17 @@ function cox_de_boor(
         tᵢ₊ₚ = knots_all[i + d]
         tᵢ₊ₚ₊₁ = knots_all[i + d + 1]
         if deriv
-            T(d * (safe_div(basis_function_values[k], tᵢ₊ₚ - tᵢ) -
-               safe_div(basis_function_values[k + 1], tᵢ₊ₚ₊₁ - tᵢ₊₁)))
+            T(
+                d * (
+                    safe_div(basis_function_values[k], tᵢ₊ₚ - tᵢ) -
+                        safe_div(basis_function_values[k + 1], tᵢ₊ₚ₊₁ - tᵢ₊₁)
+                )
+            )
         else
-            T(basis_function_values[k] * safe_div(t - tᵢ, tᵢ₊ₚ - tᵢ) +
-              basis_function_values[k + 1] * safe_div(tᵢ₊ₚ₊₁ - t, tᵢ₊ₚ₊₁ - tᵢ₊₁))
+            T(
+                basis_function_values[k] * safe_div(t - tᵢ, tᵢ₊ₚ - tᵢ) +
+                    basis_function_values[k + 1] * safe_div(tᵢ₊ₚ₊₁ - t, tᵢ₊ₚ₊₁ - tᵢ₊₁)
+            )
         end
     end
 end
@@ -53,43 +59,57 @@ end
 # (0, …, 0, Bⱼ₋₁ ₁, Bⱼ₁, 0)
 #          ⋮
 # (Bⱼ₋ₚ ₚ, Bⱼ₋ₚ₊₁ ₚ, …, Bⱼₚ, 0)
-# 
+#
 # The trailing zero is just a convenience for the algorithm and is removed in the output
 function get_basis_function_values(
         itp_dim::BSplineInterpolationDimension,
-        t::Number,
+        t::T_t,
         idx::Integer,
         derivative_order::Integer,
         multi_point_index::Nothing
-)
+    )
     (; degree, knots_all) = itp_dim
-    T = promote_type(typeof(t), eltype(itp_dim.basis_function_eval))
+    T_eval = eltype(itp_dim.basis_function_eval)
+    # Use a concrete zero value for type stability
+    _zero = zero(promote_type(T_t, T_eval))
+    _one = one(promote_type(T_t, T_eval))
     degree_plus_1 = degree + 1
 
     if derivative_order > degree
-        return ntuple(_ -> zero(T), degree_plus_1)
+        return ntuple(_ -> _zero, degree_plus_1)
     end
 
     degree_plus_2 = degree + 2
 
     # Degree 0 basis function values
     basis_function_values = ntuple(
-        k -> (k == degree_plus_1) ? one(T) : zero(T),
+        k -> (k == degree_plus_1) ? _one : _zero,
         degree_plus_2
     )
 
     # Higher order basis function values
+    # Use a helper function to avoid capturing mutable variables in closures
+    basis_function_values = _compute_basis_function_values(
+        basis_function_values, knots_all, t, idx, degree, derivative_order, degree_plus_2
+    )
+
+    return basis_function_values[1:degree_plus_1]
+end
+
+# Helper function to avoid type instability from captured variables in closures
+function _compute_basis_function_values(
+        basis_function_values, knots_all, t, idx, degree, derivative_order, degree_plus_2
+    )
     for d in 1:degree
         deriv = d > degree - derivative_order
+        # Create a local copy for the closure to capture
+        bfv = basis_function_values
         basis_function_values = ntuple(
-            k -> cox_de_boor(
-                basis_function_values, knots_all, t, idx, degree, d, k, deriv
-            ),
+            k -> cox_de_boor(bfv, knots_all, t, idx, degree, d, k, deriv),
             degree_plus_2
         )
     end
-
-    basis_function_values[1:degree_plus_1]
+    return basis_function_values
 end
 
 # Get the basis function values for one point in an
@@ -100,9 +120,11 @@ function get_basis_function_values(
         idx::Integer,
         derivative_order::Integer,
         multi_point_index::Integer
-)
-    view(itp_dim.basis_function_eval,
-        multi_point_index, :, derivative_order + 1)
+    )
+    return view(
+        itp_dim.basis_function_eval,
+        multi_point_index, :, derivative_order + 1
+    )
 end
 
 # Get all basis function values to evaluate a BSpline interpolation in t
@@ -112,9 +134,11 @@ function get_basis_function_values_all(
         idx::Tuple,
         derivative_orders::Tuple,
         multi_point_index
-)
-    map(get_basis_function_values, A.interp_dims, ts,
-        idx, derivative_orders, multi_point_index)
+    )
+    return map(
+        get_basis_function_values, A.interp_dims, ts,
+        idx, derivative_orders, multi_point_index
+    )
 end
 
 function set_basis_function_eval!(itp_dim::BSplineInterpolationDimension)::Nothing
@@ -129,7 +153,7 @@ end
 
 @kernel function basis_function_eval_kernel(
         itp_dim
-)
+    )
     i, derivative_order_plus_1 = @index(Global, NTuple)
 
     itp_dim.basis_function_eval[i, :, derivative_order_plus_1] .= get_basis_function_values(
@@ -142,16 +166,16 @@ end
 end
 
 # Wrapper for a BSplineInterpolationDimension which acts as a vector of the values
-# of the i-th basis function in the `itp_dim.t_eval`. 
+# of the i-th basis function in the `itp_dim.t_eval`.
 struct BasisFunctionVector{ID <: BSplineInterpolationDimension, T} <: AbstractVector{T}
     itp_dim::ID
     i::Int
     derivative_order_eval::Int
     function BasisFunctionVector(itp_dim, i, derivative_order_eval)
         n_basis_functions = get_n_basis_functions(itp_dim)
-        @assert 1≤i≤n_basis_functions "The itp_dim has only $n_basis_functions basis functions, got $i."
-        @assert 0≤derivative_order_eval≤itp_dim.max_derivative_order_eval "The itp_dim has max_derivative_order_eval = $(itp_dim.max_derivative_order_eval), got $derivative_order_eval."
-        new{typeof(itp_dim), eltype(itp_dim.basis_function_eval)}(
+        @assert 1 ≤ i ≤ n_basis_functions "The itp_dim has only $n_basis_functions basis functions, got $i."
+        @assert 0 ≤ derivative_order_eval ≤ itp_dim.max_derivative_order_eval "The itp_dim has max_derivative_order_eval = $(itp_dim.max_derivative_order_eval), got $derivative_order_eval."
+        return new{typeof(itp_dim), eltype(itp_dim.basis_function_eval)}(
             itp_dim, i, derivative_order_eval
         )
     end
@@ -164,7 +188,7 @@ function Base.getindex(bfv::BasisFunctionVector, j)
     (; itp_dim, i, derivative_order_eval) = bfv
     (; basis_function_eval, idx_eval, degree) = itp_dim
     idx = idx_eval[j]
-    if i ≤ idx ≤ i + degree
+    return if i ≤ idx ≤ i + degree
         basis_function_eval[j, degree + i - idx + 1, derivative_order_eval + 1]
     else
         zero(eltype(basis_function_eval))
@@ -172,7 +196,7 @@ function Base.getindex(bfv::BasisFunctionVector, j)
 end
 
 function get_n_basis_functions(itp_dim::BSplineInterpolationDimension)
-    length(itp_dim.knots_all) - itp_dim.degree - 1
+    return length(itp_dim.knots_all) - itp_dim.degree - 1
 end
 
 """

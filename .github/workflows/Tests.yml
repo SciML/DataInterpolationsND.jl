@@ -35,6 +35,9 @@ jobs:
           - "ubuntu-latest"
           - "macos-latest"
           - "windows-latest"
+        exclude:
+          - group: QA
+            version: "pre"
     uses: "SciML/.github/.github/workflows/tests.yml@v1"
     with:
       julia-version: "${{ matrix.version }}"

@@ -1,8 +1,9 @@
 module DataInterpolationsND
-using KernelAbstractions # Keep as dependency or make extension?
+using KernelAbstractions: KernelAbstractions, @Const, @index, @kernel, get_backend,
+    synchronize
 using Adapt: @adapt_structure
-using EllipsisNotation
-using RecipesBase
+using EllipsisNotation: EllipsisNotation, (..)
+using RecipesBase: RecipesBase, @recipe, @series
 
 abstract type AbstractInterpolationDimension end
 abstract type AbstractInterpolationCache end
@@ -10,7 +11,7 @@ abstract type AbstractInterpolationCache end
 struct EmptyCache <: AbstractInterpolationCache end
 
 """
-    NDInterpolation(interp_dims, u)
+    NDInterpolation(u, interp_dims; cache = EmptyCache())
 
 The interpolation object containing the interpolation dimensions and the data to interpolate `u`.
 Given the number of interpolation dimensions `N_in`, for first `N_in` dimensions of `u`
@@ -20,15 +21,19 @@ the size of `u` along that dimension must match the length of `t` of the corresp
 
   - `interp_dims`: A tuple of identically typed interpolation dimensions.
   - `u`: The array to be interpolated.
+
+## Keyword Arguments
+
+  - `cache`: Optional global cache
 """
 struct NDInterpolation{
-    N,
-    N_in,
-    N_out,
-    gType <: AbstractInterpolationCache,
-    D,
-    uType <: AbstractArray
-}
+        N,
+        N_in,
+        N_out,
+        gType <: AbstractInterpolationCache,
+        D <: Tuple{Vararg{<:AbstractInterpolationDimension}},
+        uType <: AbstractArray,
+    }
     u::uType
     interp_dims::D
     cache::gType
@@ -42,21 +47,21 @@ struct NDInterpolation{
         N_out = length(keep(NoInterpolationDimension, interp_dims))
         validate_size_u(interp_dims, u)
         validate_cache(cache, interp_dims, u)
-        new{N, N_in, N_out, typeof(cache), typeof(interp_dims), typeof(u)}(
+        return new{N, N_in, N_out, typeof(cache), typeof(interp_dims), typeof(u)}(
             u, interp_dims, cache
         )
     end
 end
 # Constructor with optional global cache
 function NDInterpolation(u, interp_dims; cache = EmptyCache())
-    NDInterpolation(u, interp_dims, cache)
+    return NDInterpolation(u, interp_dims, cache)
 end
 
 function _add_trailing_no_interp_dims(dim::AbstractInterpolationDimension, n)
-    _add_trailing_interp_dims((dim,), n)
+    return _add_trailing_interp_dims((dim,), n)
 end
 function _add_trailing_no_interp_dims(dims::Tuple, ::Val{N}) where {N}
-    (dims..., ntuple(_ -> NoInterpolationDimension(), Val{N - length(dims)}())...)
+    return (dims..., ntuple(_ -> NoInterpolationDimension(), Val{N - length(dims)}())...)
 end
 
 @adapt_structure NDInterpolation
@@ -70,12 +75,13 @@ include("plot_rec.jl")
 
 # Multiple `t` arguments to tuple (can these 2 be done in 1?)
 function (interp::NDInterpolation)(t_args::Vararg{Number}; kwargs...)
-    interp(t_args; kwargs...)
+    return interp(t_args; kwargs...)
 end
 
 function (interp::NDInterpolation)(
-        out::AbstractArray, t_args::Vararg{Number}; kwargs...)
-    interp(out, t_args; kwargs...)
+        out::AbstractArray, t_args::Vararg{Number}; kwargs...
+    )
+    return interp(out, t_args; kwargs...)
 end
 
 # In place single input evaluation
@@ -83,7 +89,7 @@ function (interp::NDInterpolation{N, N_in, N_out})(
         out::Union{Number, AbstractArray{<:Number, N_out}},
         t::Tuple{Vararg{Any, N_in}};
         derivative_orders::Tuple{Vararg{Integer, N_in}} = ntuple(_ -> 0, N_in)
-) where {N, N_in, N_out}
+    ) where {N, N_in, N_out}
     (; interp_dims, u) = interp
     # We need to add the NoInterpolationDimensions for all arguments to _interpolate.
     # Currently interp() accepts only the interpolating dimensions.
@@ -100,11 +106,11 @@ end
 # Out of place single input evaluation
 function (interp::NDInterpolation)(t::Tuple{Vararg{Number}}; kwargs...)
     out = make_out(interp, t)
-    interp(out, t; kwargs...)
+    return interp(out, t; kwargs...)
 end
 
 export NDInterpolation, LinearInterpolationDimension, ConstantInterpolationDimension,
-       BSplineInterpolationDimension, NURBSWeights, NoInterpolationDimension,
-       eval_unstructured, eval_unstructured!, eval_grid, eval_grid!
+    BSplineInterpolationDimension, NURBSWeights, NoInterpolationDimension,
+    eval_unstructured, eval_unstructured!, eval_grid, eval_grid!
 
 end # module DataInterpolationsND

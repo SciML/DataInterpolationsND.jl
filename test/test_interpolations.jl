@@ -1,7 +1,7 @@
 using DataInterpolationsND
 using Random
 using DataInterpolationsND: AbstractInterpolationDimension, EmptyCache,
-                            keepat, removeat, insertat, remove, keep
+    keepat, removeat, insertat, remove, keep
 
 @testset "tuple primitives" begin
     # These help with handling NoInterpolationDimension and its consequences
@@ -15,14 +15,15 @@ using DataInterpolationsND: AbstractInterpolationDimension, EmptyCache,
     @test keep(Int, (1, nothing, 3)) === (1, 3)
 end
 
-function test_globally_constant(ID::Type{<:AbstractInterpolationDimension};
+function test_globally_constant(
+        ID::Type{<:AbstractInterpolationDimension};
         args1 = (),
         args2 = (),
         kwargs1 = (),
         kwargs2 = (),
         cache = EmptyCache(),
         test_derivatives = true
-)
+    )
     t1 = [-3.14, 1.0, 3.0, 7.6, 12.8]
     t2 = [-2.71, 1.41, 12.76, 50.2, 120.0]
 
@@ -35,32 +36,36 @@ function test_globally_constant(ID::Type{<:AbstractInterpolationDimension};
     # Evaluation in data points
     itp_dims = (
         ID(t1, args1...; t_eval = t1, kwargs1...),
-        ID(t2, args2...; t_eval = t2, kwargs2...)
+        ID(t2, args2...; t_eval = t2, kwargs2...),
     )
 
     itp = NDInterpolation(u, itp_dims; cache)
 
     grid = eval_grid(itp)
-    @test all(x -> isapprox(x, 2.0; atol = 1e-10), grid)
+    @test all(x -> isapprox(x, 2.0; atol = 1.0e-10), grid)
     if test_derivatives
         @test all(
-            x -> isapprox(x, 0.0; atol = 1e-10), eval_grid(itp, derivative_orders = (1, 0)))
+            x -> isapprox(x, 0.0; atol = 1.0e-10), eval_grid(itp, derivative_orders = (1, 0))
+        )
         @test all(
-            x -> isapprox(x, 0.0; atol = 1e-10), eval_grid(itp, derivative_orders = (0, 1)))
+            x -> isapprox(x, 0.0; atol = 1.0e-10), eval_grid(itp, derivative_orders = (0, 1))
+        )
     end
 
     # Evaluation between data points
     itp_dims = (
         ID(t1, args1...; t_eval = t1[1:(end - 1)] + diff(t1) / 2, kwargs1...),
-        ID(t2, args2...; t_eval = t2[1:(end - 1)] + diff(t2) / 2, kwargs2...)
+        ID(t2, args2...; t_eval = t2[1:(end - 1)] + diff(t2) / 2, kwargs2...),
     )
     itp = NDInterpolation(u, itp_dims; cache)
-    @test all(x -> isapprox(x, 2.0; atol = 1e-10), eval_grid(itp))
-    if test_derivatives
+    @test all(x -> isapprox(x, 2.0; atol = 1.0e-10), eval_grid(itp))
+    return if test_derivatives
         @test all(
-            x -> isapprox(x, 0.0; atol = 1e-10), eval_grid(itp, derivative_orders = (1, 0)))
+            x -> isapprox(x, 0.0; atol = 1.0e-10), eval_grid(itp, derivative_orders = (1, 0))
+        )
         @test all(
-            x -> isapprox(x, 0.0; atol = 1e-10), eval_grid(itp, derivative_orders = (0, 1)))
+            x -> isapprox(x, 0.0; atol = 1.0e-10), eval_grid(itp, derivative_orders = (0, 1))
+        )
     end
 end
 
@@ -78,6 +83,7 @@ function test_analytic(itp::NDInterpolation{<:Any, N_in}, f) where {N_in}
     for t in Iterators.product(ts_...)
         @test itp(t) ≈ f(t...)
     end
+    return
 end
 
 @testset "Linear Interpolation" begin
@@ -90,7 +96,7 @@ end
 
     itp_dims = (
         LinearInterpolationDimension(t1),
-        LinearInterpolationDimension(t2)
+        LinearInterpolationDimension(t2),
     )
     u = f.(t1, t2')
     itp = NDInterpolation(u, itp_dims)
@@ -98,7 +104,7 @@ end
 
     itp_dims = (
         NoInterpolationDimension(),
-        LinearInterpolationDimension(t2; t_eval = t2 ./ 2)
+        LinearInterpolationDimension(t2; t_eval = t2 ./ 2),
     )
     itp = NDInterpolation(u, itp_dims)
     eval_grid(itp)
@@ -149,15 +155,17 @@ end
     multiplicities = [3, 2, 2, 2, 3]
 
     # Control points
-    u = Float64[1 0;
-                1 1;
-                0 1;
-                -1 1;
-                -1 0;
-                -1 -1;
-                0 -1;
-                1 -1;
-                1 0]
+    u = Float64[
+        1 0;
+        1 1;
+        0 1;
+        -1 1;
+        -1 0;
+        -1 -1;
+        0 -1;
+        1 -1;
+        1 0
+    ]
 
     # Weights
     weights = ones(9)
@@ -180,7 +188,7 @@ end
     itp_dims = (
         NoInterpolationDimension(),
         LinearInterpolationDimension(t2; t_eval = t2),
-        BSplineInterpolationDimension(t3, 1; t_eval = t3)
+        BSplineInterpolationDimension(t3, 1; t_eval = t3),
     )
     itp = NDInterpolation(u, itp_dims)
     @test isapprox(itp(1.0, 4.0), [1.0, 1.0, 1.0])
