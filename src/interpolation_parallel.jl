@@ -43,8 +43,6 @@ function eval_unstructured!(
         d -> length(d.t_eval) == size(out, 1),
         remove(NoInterpolationDimension, interp.interp_dims)
     ) "The t_eval of all interpolation dimensions must have the same length as the first dimension of out."
-    # TODO: This also must be generalized: The shape of out must correspond to the size of the NonInterpolationDimension dimensions,
-    # assuming 'not indexing them'
     @assert size(out)[2:end] == get_output_size(interp) "The size of the last N_out dimensions of out must be the same as the output size of the interpolation."
     eval_grid = false
     eval_kernel(backend)(
