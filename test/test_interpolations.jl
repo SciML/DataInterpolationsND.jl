@@ -1,4 +1,5 @@
 @testitem "Linear Interpolation" begin
+    using Random
     include("utils.jl")
     test_globally_constant(LinearInterpolationDimension)
 
