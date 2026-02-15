@@ -62,7 +62,7 @@ end
             end
         end
     )
-    @test res ≈ interp(0.4, 0.8; derivative_orders=(1, 0))[1]
+    @test res ≈ interp(0.4, 0.8; derivative_orders = (1, 0))[1]
 
     der = Symbolics.derivative(ex[1], y)
     @test size(der) == ()
@@ -74,5 +74,5 @@ end
             end
         end
     )
-    @test res ≈ interp(0.4, 0.8; derivative_orders=(0, 1))[1]
+    @test res ≈ interp(0.4, 0.8; derivative_orders = (0, 1))[1]
 end
