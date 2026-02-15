@@ -1,8 +1,6 @@
-using JET
-using DataInterpolationsND
-using Test
-
-@testset "JET static analysis" begin
+@testitem "JET static analysis" begin
+    using JET
+    using DataInterpolationsND
     # Linear interpolation setup
     t1 = [-3.14, 1.0, 3.0, 7.6, 12.8]
     t2 = [-2.71, 1.41, 12.76, 50.2, 120.0]
@@ -118,7 +116,9 @@ using Test
     end
 end
 
-@testset "JET type optimization" begin
+@testitem "JET type optimization" begin
+    using JET
+    using DataInterpolationsND
     # Linear interpolation setup
     t1 = [-3.14, 1.0, 3.0, 7.6, 12.8]
     t2 = [-2.71, 1.41, 12.76, 50.2, 120.0]
