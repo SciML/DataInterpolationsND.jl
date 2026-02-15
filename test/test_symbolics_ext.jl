@@ -1,5 +1,4 @@
 @testitem "Basics" begin
-    println("foo")
     using Symbolics
     using Symbolics: unwrap
     import SymbolicUtils as SU
