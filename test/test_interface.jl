@@ -4,7 +4,7 @@ using Test
 # Interface tests to verify the package properly adheres to Julia's standard interfaces
 # and SciML's array/number interfaces. Uses BigFloat to test numeric type genericity.
 
-@testset "BigFloat Support" begin
+@testitem "BigFloat Support" begin
     @testset "LinearInterpolationDimension" begin
         t = BigFloat[1.0, 2.0, 3.0, 4.0]
         t_eval = BigFloat[1.5, 2.5]
@@ -12,7 +12,7 @@ using Test
         itp_dim = LinearInterpolationDimension(t)
         @test eltype(itp_dim.t) == BigFloat
 
-        itp_dim_eval = LinearInterpolationDimension(t; t_eval = t_eval)
+        itp_dim_eval = LinearInterpolationDimension(t; t_eval=t_eval)
         @test eltype(itp_dim_eval.t_eval) == BigFloat
     end
 
@@ -23,7 +23,7 @@ using Test
         itp_dim = ConstantInterpolationDimension(t)
         @test eltype(itp_dim.t) == BigFloat
 
-        itp_dim_eval = ConstantInterpolationDimension(t; t_eval = t_eval)
+        itp_dim_eval = ConstantInterpolationDimension(t; t_eval=t_eval)
         @test eltype(itp_dim_eval.t_eval) == BigFloat
     end
 
@@ -36,7 +36,7 @@ using Test
         @test eltype(itp_dim.knots_all) == BigFloat
 
         itp_dim_eval = BSplineInterpolationDimension(
-            t, 2; t_eval = t_eval, max_derivative_order_eval = 1
+            t, 2; t_eval=t_eval, max_derivative_order_eval=1
         )
         @test eltype(itp_dim_eval.t_eval) == BigFloat
         @test eltype(itp_dim_eval.basis_function_eval) <: BigFloat
@@ -114,8 +114,8 @@ using Test
         u = rand(BigFloat, 4, 4)
 
         itp_dims = (
-            LinearInterpolationDimension(t1; t_eval = t1_eval),
-            LinearInterpolationDimension(t2; t_eval = t2_eval),
+            LinearInterpolationDimension(t1; t_eval=t1_eval),
+            LinearInterpolationDimension(t2; t_eval=t2_eval),
         )
         itp = NDInterpolation(u, itp_dims)
 
@@ -141,7 +141,7 @@ using Test
     end
 end
 
-@testset "Float32 Support" begin
+@testitem "Float32 Support" begin
     @testset "NDInterpolation with Linear" begin
         t1 = Float32[1.0, 2.0, 3.0, 4.0]
         t2 = Float32[1.0, 2.0, 3.0, 4.0]
@@ -170,8 +170,8 @@ end
         u = rand(Float32, 4, 4)
 
         itp_dims = (
-            LinearInterpolationDimension(t1; t_eval = t1_eval),
-            LinearInterpolationDimension(t2; t_eval = t2_eval),
+            LinearInterpolationDimension(t1; t_eval=t1_eval),
+            LinearInterpolationDimension(t2; t_eval=t2_eval),
         )
         itp = NDInterpolation(u, itp_dims)
 
@@ -180,7 +180,7 @@ end
     end
 end
 
-@testset "Type Promotion" begin
+@testitem "Type Promotion" begin
     @testset "Mixed precision t and u" begin
         t1 = Float32[1.0, 2.0, 3.0, 4.0]
         t2 = Float32[1.0, 2.0, 3.0, 4.0]
