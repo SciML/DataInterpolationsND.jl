@@ -67,7 +67,7 @@ function get_basis_function_values(
         idx::Integer,
         derivative_order::Integer,
         multi_point_index::Nothing
-    )
+    ) where {T_t}
     (; degree, knots_all) = itp_dim
     T_eval = eltype(itp_dim.basis_function_eval)
     # Use a concrete zero value for type stability
