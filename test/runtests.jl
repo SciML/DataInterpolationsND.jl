@@ -22,7 +22,7 @@ elseif GROUP == "Extensions"
     @run_package_tests filter = ti -> any(endswith(ti.filename, file) for file in extension_files)
 elseif GROUP == "QA"
     activate_qa_env()
-    @run_package_tests filter = ti -> endswith(ti.filename, "qa/runtests.jl")
+    @run_package_tests filter = ti -> contains(ti.filename, r"test_qa_")
 elseif GROUP == "GPU"
     activate_gpu_env()
     # TODO: Add GPU tests
