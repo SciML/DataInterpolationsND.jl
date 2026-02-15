@@ -1,5 +1,6 @@
 using TestItemRunner, Pkg
 const GROUP = get(ENV, "GROUP", "All")
+@show GROUP
 
 function activate_gpu_env()
     Pkg.activate("gpu")
