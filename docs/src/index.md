@@ -16,7 +16,7 @@ t2 = cumsum(rand(7))
 
 interpolation_dimensions = (
     LinearInterpolationDimension(t1),
-    LinearInterpolationDimension(t2)
+    ConstantInterpolationDimension(t2)
 )
 
 # The outputs will be vectors of length 2
@@ -39,7 +39,7 @@ If we provide `t_eval` for the interpolation dimensions, we can evaluate at thes
 ```julia
 interpolation_dimensions = (
     LinearInterpolationDimension(t1; t_eval = range(first(t1), last(t1); length = 100)),
-    LinearInterpolationDimension(t2; t_eval = range(first(t2), last(t2); length = 100))
+    ConstantInterpolationDimension(t2; t_eval = range(first(t2), last(t2); length = 100))
 )
 
 interp = NDInterpolation(u, interpolation_dimensions)

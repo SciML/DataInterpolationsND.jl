@@ -9,7 +9,7 @@ Random.seed!(1)
 
 interp_dims = (
     LinearInterpolationDimension(cumsum(0.5 .+ rand(5))),
-    LinearInterpolationDimension(cumsum(0.5 .+ rand(10)))
+    ConstantInterpolationDimension(cumsum(0.5 .+ rand(10)))
 )
 
 t_eval_1 = range(
@@ -85,7 +85,7 @@ using LinearAlgebra
 
 interp_dims = (
     LinearInterpolationDimension(interp_dims[1].t; t_eval = t_eval_1),
-    LinearInterpolationDimension(interp_dims[2].t; t_eval = t_eval_2)
+    ConstantInterpolationDimension(interp_dims[2].t; t_eval = t_eval_2)
 )
 itp = NDInterpolation(u, interp_dims)
 
