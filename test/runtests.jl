@@ -1,6 +1,5 @@
 using TestItemRunner, Pkg
 const GROUP = get(ENV, "GROUP", "All")
-@show GROUP
 
 function activate_gpu_env()
     Pkg.activate("gpu")
@@ -16,10 +15,8 @@ end
 
 if GROUP == "All" || GROUP == "Core"
     core_files = ("test_interpolations.jl", "test_derivatives.jl", "test_datainterpolations_comparison.jl", "test_interface.jl")
-    @run_package_tests filter = ti -> begin
-        @show ti.filename
-        any(endswith(ti.filename, file) for file in core_files)
-    end
+    @run_package_tests filter = ti -> any(endswith(ti.filename, file) for file in core_files)
+
 elseif GROUP == "Extensions"
     extension_files = ("test_symbolics_ext.jl",)
     @run_package_tests filter = ti -> any(endswith(ti.filename, file) for file in extension_files)

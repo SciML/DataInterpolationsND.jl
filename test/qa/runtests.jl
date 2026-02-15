@@ -1,3 +1,5 @@
 using TestItemRunner
 
-@run_package_tests
+include("aqua.jl")
+include("explicit_imports.jl")
+include("jet.jl")
