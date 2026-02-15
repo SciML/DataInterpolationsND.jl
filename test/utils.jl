@@ -10,9 +10,9 @@ using Symbolics: unwrap
 ###
 
 function test_globally_constant(
-    ID::Type{<:AbstractInterpolationDimension}; args1=(), args2=(), kwargs1=(),
-    kwargs2=(), cache=EmptyCache(), test_derivatives=true
-)
+        ID::Type{<:AbstractInterpolationDimension}; args1 = (), args2 = (), kwargs1 = (),
+        kwargs2 = (), cache = EmptyCache(), test_derivatives = true
+    )
     t1 = [-3.14, 1.0, 3.0, 7.6, 12.8]
     t2 = [-2.71, 1.41, 12.76, 50.2, 120.0]
 
@@ -24,34 +24,34 @@ function test_globally_constant(
 
     # Evaluation in data points
     itp_dims = (
-        ID(t1, args1...; t_eval=t1, kwargs1...),
-        ID(t2, args2...; t_eval=t2, kwargs2...),
+        ID(t1, args1...; t_eval = t1, kwargs1...),
+        ID(t2, args2...; t_eval = t2, kwargs2...),
     )
 
     itp = NDInterpolation(u, itp_dims; cache)
-    @test all(x -> isapprox(x, 2.0; atol=1.0e-10), eval_grid(itp))
+    @test all(x -> isapprox(x, 2.0; atol = 1.0e-10), eval_grid(itp))
     if test_derivatives
         @test all(
-            x -> isapprox(x, 0.0; atol=1.0e-10), eval_grid(itp, derivative_orders=(1, 0))
+            x -> isapprox(x, 0.0; atol = 1.0e-10), eval_grid(itp, derivative_orders = (1, 0))
         )
         @test all(
-            x -> isapprox(x, 0.0; atol=1.0e-10), eval_grid(itp, derivative_orders=(0, 1))
+            x -> isapprox(x, 0.0; atol = 1.0e-10), eval_grid(itp, derivative_orders = (0, 1))
         )
     end
 
     # Evaluation between data points
     itp_dims = (
-        ID(t1, args1...; t_eval=t1[1:(end-1)] + diff(t1) / 2, kwargs1...),
-        ID(t2, args2...; t_eval=t2[1:(end-1)] + diff(t2) / 2, kwargs2...),
+        ID(t1, args1...; t_eval = t1[1:(end - 1)] + diff(t1) / 2, kwargs1...),
+        ID(t2, args2...; t_eval = t2[1:(end - 1)] + diff(t2) / 2, kwargs2...),
     )
     itp = NDInterpolation(u, itp_dims)
-    @test all(x -> isapprox(x, 2.0; atol=1.0e-10), eval_grid(itp))
+    @test all(x -> isapprox(x, 2.0; atol = 1.0e-10), eval_grid(itp))
     return if test_derivatives
         @test all(
-            x -> isapprox(x, 0.0; atol=1.0e-10), eval_grid(itp, derivative_orders=(1, 0))
+            x -> isapprox(x, 0.0; atol = 1.0e-10), eval_grid(itp, derivative_orders = (1, 0))
         )
         @test all(
-            x -> isapprox(x, 0.0; atol=1.0e-10), eval_grid(itp, derivative_orders=(0, 1))
+            x -> isapprox(x, 0.0; atol = 1.0e-10), eval_grid(itp, derivative_orders = (0, 1))
         )
     end
 end
@@ -64,7 +64,7 @@ function test_analytic(itp::NDInterpolation{N_in}, f) where {N_in}
     end
 
     # Evaluation between data points
-    ts_ = ntuple(dim_in -> ts[dim_in][1:(end-1)] + diff(ts[dim_in]) / 2, N_in)
+    ts_ = ntuple(dim_in -> ts[dim_in][1:(end - 1)] + diff(ts[dim_in]) / 2, N_in)
     for t in Iterators.product(ts_...)
         @test itp(t) ≈ f(t...)
     end

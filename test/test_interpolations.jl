@@ -1,4 +1,3 @@
-
 @testitem "Linear Interpolation" begin
     include("utils.jl")
     test_globally_constant(LinearInterpolationDimension)
@@ -21,9 +20,9 @@ end
 @testitem "BSpline Interpolation" begin
     include("utils.jl")
     test_globally_constant(
-        BSplineInterpolationDimension, args1=(2,), args2=(3,),
-        kwargs1=(:max_derivative_order_eval => 1,),
-        kwargs2=(:max_derivative_order_eval => 1,)
+        BSplineInterpolationDimension, args1 = (2,), args2 = (3,),
+        kwargs1 = (:max_derivative_order_eval => 1,),
+        kwargs2 = (:max_derivative_order_eval => 1,)
     )
 
     f(t1, t2, t3) = t1^2 + t2^2 + t3^2
@@ -43,18 +42,18 @@ end
     include("utils.jl")
 
     test_globally_constant(
-        BSplineInterpolationDimension; args1=(3,), args2=(1,),
-        kwargs1=(:max_derivative_order_eval => 1,),
-        kwargs2=(:max_derivative_order_eval => 1,),
-        cache=NURBSWeights(rand(7, 5)),
-        test_derivatives=false
+        BSplineInterpolationDimension; args1 = (3,), args2 = (1,),
+        kwargs1 = (:max_derivative_order_eval => 1,),
+        kwargs2 = (:max_derivative_order_eval => 1,),
+        cache = NURBSWeights(rand(7, 5)),
+        test_derivatives = false
     )
 
     ## Circle representation
     # Knots
-    t = collect(0:(π/2):(2π))
+    t = collect(0:(π / 2):(2π))
 
-    t_eval = collect(range(0, 2π, length=100))
+    t_eval = collect(range(0, 2π, length = 100))
 
     # Multiplicities
     multiplicities = [3, 2, 2, 2, 3]

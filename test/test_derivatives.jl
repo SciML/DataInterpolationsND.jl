@@ -3,18 +3,18 @@
     using ForwardDiff
 
     function test_deriv_10(itp, t)
-        return @test itp(t; derivative_orders=(1, 0)) ≈
-                     ForwardDiff.derivative(t₁ -> itp(t₁, t[2]), t[1])
+        return @test itp(t; derivative_orders = (1, 0)) ≈
+            ForwardDiff.derivative(t₁ -> itp(t₁, t[2]), t[1])
     end
 
     function test_deriv_01(itp, t)
-        return @test itp(t; derivative_orders=(0, 1)) ≈
-                     ForwardDiff.derivative(t₂ -> itp(t[1], t₂), t[2])
+        return @test itp(t; derivative_orders = (0, 1)) ≈
+            ForwardDiff.derivative(t₂ -> itp(t[1], t₂), t[2])
     end
 
     function test_deriv_11(itp, t)
-        return @test itp(t; derivative_orders=(1, 1)) ≈
-                     ForwardDiff.derivative(
+        return @test itp(t; derivative_orders = (1, 1)) ≈
+            ForwardDiff.derivative(
             t₂ -> ForwardDiff.derivative(
                 t₁ -> itp(t₁, t₂), t[1]
             ),
@@ -35,8 +35,8 @@
 
         # Derivatives between data points
         for t in Iterators.product(
-            t1[1:(end-1)] + diff(t1) / 2, t2[1:(end-1)] + diff(t2) / 2
-        )
+                t1[1:(end - 1)] + diff(t1) / 2, t2[1:(end - 1)] + diff(t2) / 2
+            )
             test_deriv_10(itp, t)
             test_deriv_01(itp, t)
             test_deriv_11(itp, t)
