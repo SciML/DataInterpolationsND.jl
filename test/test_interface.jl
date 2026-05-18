@@ -4,7 +4,7 @@ using Test
 # Interface tests to verify the package properly adheres to Julia's standard interfaces
 # and SciML's array/number interfaces. Uses BigFloat to test numeric type genericity.
 
-@testset "BigFloat Support" begin
+@testitem "BigFloat Support" begin
     @testset "LinearInterpolationDimension" begin
         t = BigFloat[1.0, 2.0, 3.0, 4.0]
         t_eval = BigFloat[1.5, 2.5]
@@ -141,7 +141,7 @@ using Test
     end
 end
 
-@testset "Float32 Support" begin
+@testitem "Float32 Support" begin
     @testset "NDInterpolation with Linear" begin
         t1 = Float32[1.0, 2.0, 3.0, 4.0]
         t2 = Float32[1.0, 2.0, 3.0, 4.0]
@@ -180,7 +180,7 @@ end
     end
 end
 
-@testset "Type Promotion" begin
+@testitem "Type Promotion" begin
     @testset "Mixed precision t and u" begin
         t1 = Float32[1.0, 2.0, 3.0, 4.0]
         t2 = Float32[1.0, 2.0, 3.0, 4.0]

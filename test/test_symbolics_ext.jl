@@ -1,23 +1,21 @@
-using DataInterpolationsND
-using Symbolics
-import SymbolicUtils as SU
-using Symbolics: unwrap
-using Test
+@testitem "Basics" begin
+    using Symbolics
+    using Symbolics: unwrap
+    import SymbolicUtils as SU
 
-t1 = cumsum(rand(5))
-t2 = cumsum(rand(7))
+    t1 = cumsum(rand(5))
+    t2 = cumsum(rand(7))
 
-interpolation_dimensions = (
-    LinearInterpolationDimension(t1),
-    LinearInterpolationDimension(t2),
-)
+    interpolation_dimensions = (
+        LinearInterpolationDimension(t1),
+        LinearInterpolationDimension(t2),
+    )
 
-u = rand(5, 7, 2)
+    u = rand(5, 7, 2)
+    interp = NDInterpolation(u, interpolation_dimensions)
 
-interp = NDInterpolation(u, interpolation_dimensions)
-@variables x y
+    @variables x y
 
-@testset "Basics" begin
     ex = interp(x, y)
     @test ex isa Symbolics.Arr
     @test size(ex) == (2,)
@@ -36,7 +34,23 @@ interp = NDInterpolation(u, interpolation_dimensions)
     @test ex isa SU.BasicSymbolic{Vector{Real}}
 end
 
-@testset "Differentiation" begin
+@testitem "Differentiation" begin
+    using Symbolics
+    import SymbolicUtils as SU
+
+    t1 = cumsum(rand(5))
+    t2 = cumsum(rand(7))
+
+    interpolation_dimensions = (
+        LinearInterpolationDimension(t1),
+        LinearInterpolationDimension(t2),
+    )
+
+    u = rand(5, 7, 2)
+    interp = NDInterpolation(u, interpolation_dimensions)
+
+    @variables x y
+
     ex = interp(x, y)
     der = Symbolics.derivative(ex[1], x)
     @test size(der) == ()

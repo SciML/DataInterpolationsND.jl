@@ -1,5 +1,5 @@
-using SafeTestsets
+using TestItemRunner
 
-@safetestset "Aqua" include("aqua.jl")
-@safetestset "ExplicitImports" include("explicit_imports.jl")
-@safetestset "JET" include("jet.jl")
+include("test_qa_aqua.jl")
+include("test_qa_explicit_imports.jl")
+include("test_qa_jet.jl")

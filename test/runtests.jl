@@ -1,4 +1,4 @@
-using SafeTestsets, Pkg
+using TestItemRunner, Pkg
 const GROUP = get(ENV, "GROUP", "All")
 
 function activate_gpu_env()
@@ -14,15 +14,15 @@ function activate_qa_env()
 end
 
 if GROUP == "All" || GROUP == "Core"
-    @safetestset "Interpolations" include("test_interpolations.jl")
-    @safetestset "Derivatives" include("test_derivatives.jl")
-    @safetestset "DataInterpolations" include("test_datainterpolations_comparison.jl")
-    @safetestset "Interface" include("test_interface.jl")
+    core_files = ("test_interpolations.jl", "test_derivatives.jl", "test_datainterpolations_comparison.jl", "test_interface.jl")
+    @run_package_tests filter = ti -> any(endswith(ti.filename, file) for file in core_files)
+
 elseif GROUP == "Extensions"
-    @safetestset "Symbolics Extension" include("test_symbolics_ext.jl")
+    extension_files = ("test_symbolics_ext.jl",)
+    @run_package_tests filter = ti -> any(endswith(ti.filename, file) for file in extension_files)
 elseif GROUP == "QA"
     activate_qa_env()
-    include("qa/runtests.jl")
+    @run_package_tests filter = ti -> contains(ti.filename, r"test_qa_")
 elseif GROUP == "GPU"
     activate_gpu_env()
     # TODO: Add GPU tests
