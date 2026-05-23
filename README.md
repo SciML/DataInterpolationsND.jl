@@ -14,7 +14,7 @@ DataInterpolationsND.jl is a library for interpolating arbitrarily high dimensio
 
 For one dimensional interpolation see also [DataInterpolations.jl](https://github.com/SciML/DataInterpolations.jl).
 
-DataInterpolationsND.jl is similar in functionality to [Interpolations.jl](https://github.com/JuliaMath/Interpolations.jl), a well established interpolation package that is currently much more feature rich than DataInterpolationsND.jl. We hope to justify the existence of DataInterpolationsND.jl through its use of the KernelAbstractions and its planned integration with the SciML ecosystem.
+DataInterpolationsND.jl is similar in functionality to [Interpolations.jl](https://github.com/JuliaMath/Interpolations.jl), a well established interpolation package that is currently much more feature rich than DataInterpolationsND.jl. We hope to justify the existence of DataInterpolationsND.jl through its use of KernelAbstractions and its planned integration with the SciML ecosystem.
 
 ## API
 
@@ -28,7 +28,7 @@ t2 = cumsum(rand(7))
 
 interpolation_dimensions = (
     LinearInterpolationDimension(t1),
-    LinearInterpolationDimension(t2)
+    ConstantInterpolationDimension(t2)
 )
 
 # The outputs will be vectors of length 2
@@ -51,7 +51,7 @@ If we provide `t_eval` for the interpolation dimensions, we can evaluate at thes
 ```julia
 interpolation_dimensions = (
     LinearInterpolationDimension(t1; t_eval = range(first(t1), last(t1); length = 100)),
-    LinearInterpolationDimension(t2; t_eval = range(first(t2), last(t2); length = 100))
+    ConstantInterpolationDimension(t2; t_eval = range(first(t2), last(t2); length = 100))
 )
 
 interp = NDInterpolation(u, interpolation_dimensions)
