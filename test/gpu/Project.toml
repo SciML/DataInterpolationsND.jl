@@ -2,4 +2,4 @@
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 
 [compat]
-CUDA = "5"
+CUDA = "5, 6.1"
