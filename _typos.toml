@@ -1,0 +1,4 @@
+# "ND" stands for "N-Dimensional" throughout this package (the package name
+# DataInterpolationsND, the NDInterpolation type, etc.); it is not a typo for "AND".
+[default.extend-words]
+ND = "ND"
