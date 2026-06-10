@@ -1,5 +1,9 @@
 [Core]
 versions = ["lts", "1", "pre"]
 
+[Extensions]
+versions = ["lts", "1", "pre"]
+os = ["ubuntu-latest", "macos-latest", "windows-latest"]
+
 [QA]
 versions = ["lts", "1"]
