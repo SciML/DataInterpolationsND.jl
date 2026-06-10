@@ -51,11 +51,7 @@ function validate_size_u(
     return @assert expected_size == size(u)[1:N_in] "Expected the size of the first N_in dimensions of u to be $expected_size based on the BSplineInterpolation properties."
 end
 
-function validate_cache(
-        ::EmptyCache, ::NTuple{N_in, ID}, ::AbstractArray
-    ) where {N_in, ID}
-    return nothing
-end
+validate_cache(::EmptyCache, ::Tuple, ::AbstractArray) = nothing
 
 function validate_cache(
         nurbs_weights::NURBSWeights,
@@ -66,10 +62,8 @@ function validate_cache(
     return @assert size(nurbs_weights.weights) == size_expected "The size of the weights array must match the length of the first N_in dimensions of u ($size_expected)."
 end
 
-function validate_cache(
-        ::gType, ::NTuple{N_in, ID}, ::AbstractArray
-    ) where {gType, N_in, ID}
-    return @error("Interpolation dimension type $ID is not compatible with global cache type $gType.")
+function validate_cache(cache, interp_dims::Tuple, ::AbstractArray)
+    return @error("Interpolation dimension type $(eltype(interp_dims)) is not compatible with global cache type $(typeof(cache)).")
 end
 
 function get_ts(
