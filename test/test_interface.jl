@@ -209,16 +209,22 @@ end
         u_bspline = fill(2.0, 6, 7)
         itp_bspline = NDInterpolation(
             u_bspline,
-            (BSplineInterpolationDimension(t1, 2; t_eval = t1_eval,
-                    max_derivative_order_eval = 1),
-                BSplineInterpolationDimension(t2, 3; t_eval = t2_eval,
-                    max_derivative_order_eval = 1))
+            (
+                BSplineInterpolationDimension(
+                    t1, 2; t_eval = t1_eval,
+                    max_derivative_order_eval = 1
+                ),
+                BSplineInterpolationDimension(
+                    t2, 3; t_eval = t2_eval,
+                    max_derivative_order_eval = 1
+                ),
+            )
         )
 
         result = eval_unstructured(itp_bspline)
         @test size(result) == (4,)
         # For constant data, result should be approximately constant
-        @test all(x -> isapprox(x, 2.0; atol = 1e-10), result)
+        @test all(x -> isapprox(x, 2.0; atol = 1.0e-10), result)
 
         # Test with derivatives
         result_deriv = eval_unstructured(itp_bspline; derivative_orders = (1, 0))
@@ -234,14 +240,14 @@ end
 
         itp_dims = (
             BSplineInterpolationDimension(t, 2; t_eval = t_eval),
-            BSplineInterpolationDimension(t, 2; t_eval = t_eval)
+            BSplineInterpolationDimension(t, 2; t_eval = t_eval),
         )
         itp = NDInterpolation(u, itp_dims)
 
         result = eval_unstructured(itp)
         @test eltype(result) == BigFloat
         @test size(result) == (4,)
-        @test all(x -> isapprox(x, BigFloat(3.0); atol = BigFloat(1e-10)), result)
+        @test all(x -> isapprox(x, BigFloat(3.0); atol = BigFloat(1.0e-10)), result)
     end
 
     @testset "NURBS eval_unstructured" begin
@@ -251,14 +257,20 @@ end
         u_nurbs = Float64[1 0; 1 1; 0 1; -1 1; -1 0; -1 -1; 0 -1; 1 -1; 1 0]
         weights = ones(9)
         weights[2:2:end] ./= sqrt(2)
-        itp_nurbs = NDInterpolation(u_nurbs,
-            (BSplineInterpolationDimension(t_nurbs, 2;
-                multiplicities = multiplicities, t_eval = t_eval_nurbs),);
-            cache = NURBSWeights(weights))
+        itp_nurbs = NDInterpolation(
+            u_nurbs,
+            (
+                BSplineInterpolationDimension(
+                    t_nurbs, 2;
+                    multiplicities = multiplicities, t_eval = t_eval_nurbs
+                ),
+            );
+            cache = NURBSWeights(weights)
+        )
 
         result = eval_unstructured(itp_nurbs)
         @test size(result) == (100, 2)
         # Points should be on unit circle
-        @test all(row -> isapprox(row[1]^2 + row[2]^2, 1.0; atol = 1e-10), eachrow(result))
+        @test all(row -> isapprox(row[1]^2 + row[2]^2, 1.0; atol = 1.0e-10), eachrow(result))
     end
 end
