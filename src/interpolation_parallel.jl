@@ -121,14 +121,18 @@ end
         idx_eval = ntuple(i -> A.interp_dims[i].idx_eval[only(k)], N_in)
     end
 
+    # For unstructured evaluation (eval_grid=false), k is a 1-tuple containing
+    # the linear index. Convert to scalar for proper method dispatch in BSpline code.
+    multi_point_index = eval_grid ? k : only(k)
+
     if iszero(N_out)
         out[k...] = _interpolate!(
-            make_out(A, t_eval), A, t_eval, idx_eval, derivative_orders, k
+            make_out(A, t_eval), A, t_eval, idx_eval, derivative_orders, multi_point_index
         )
     else
         _interpolate!(
             view(out, k..., ..),
-            A, t_eval, idx_eval, derivative_orders, k
+            A, t_eval, idx_eval, derivative_orders, multi_point_index
         )
     end
 end
