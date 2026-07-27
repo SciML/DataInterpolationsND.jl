@@ -1,5 +1,22 @@
 using DataInterpolationsND
+using Adapt
 using Test
+
+struct CopyVectorAdapter end
+
+Adapt.adapt_storage(::Type{CopyVectorAdapter}, values::Vector) = copy(values)
+
+@testset "Adapt integration" begin
+    interp_dim = LinearInterpolationDimension([0.0, 1.0])
+    interp = NDInterpolation([0.0, 1.0], interp_dim)
+    adapted = Adapt.adapt(CopyVectorAdapter, interp)
+
+    @test adapted isa NDInterpolation
+    @test adapted.u == interp.u
+    @test adapted.u !== interp.u
+    @test adapted.interp_dims[1].t == interp.interp_dims[1].t
+    @test adapted.interp_dims[1].t !== interp.interp_dims[1].t
+end
 
 # Interface tests to verify the package properly adheres to Julia's standard interfaces
 # and SciML's array/number interfaces. Uses BigFloat to test numeric type genericity.

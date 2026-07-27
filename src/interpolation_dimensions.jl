@@ -26,7 +26,13 @@ struct LinearInterpolationDimension{
     end
 end
 
-@adapt_structure LinearInterpolationDimension
+function adapt_structure(to, interp_dim::LinearInterpolationDimension)
+    return LinearInterpolationDimension(
+        adapt_structure(to, interp_dim.t),
+        adapt_structure(to, interp_dim.t_eval),
+        adapt_structure(to, interp_dim.idx_eval),
+    )
+end
 
 function LinearInterpolationDimension(t; t_eval = similar(t, 0))
     idx_eval = similar(t_eval, Int)
@@ -69,7 +75,14 @@ struct ConstantInterpolationDimension{
     end
 end
 
-@adapt_structure ConstantInterpolationDimension
+function adapt_structure(to, interp_dim::ConstantInterpolationDimension)
+    return ConstantInterpolationDimension(
+        adapt_structure(to, interp_dim.t),
+        adapt_structure(to, interp_dim.left),
+        adapt_structure(to, interp_dim.t_eval),
+        adapt_structure(to, interp_dim.idx_eval),
+    )
+end
 
 function ConstantInterpolationDimension(t; left = true, t_eval = similar(t, 0))
     idx_eval = similar(t_eval, Int)
@@ -133,7 +146,18 @@ struct BSplineInterpolationDimension{
     end
 end
 
-@adapt_structure BSplineInterpolationDimension
+function adapt_structure(to, interp_dim::BSplineInterpolationDimension)
+    return BSplineInterpolationDimension(
+        adapt_structure(to, interp_dim.t),
+        adapt_structure(to, interp_dim.knots_all),
+        adapt_structure(to, interp_dim.t_eval),
+        adapt_structure(to, interp_dim.idx_eval),
+        adapt_structure(to, interp_dim.degree),
+        adapt_structure(to, interp_dim.max_derivative_order_eval),
+        adapt_structure(to, interp_dim.basis_function_eval),
+        adapt_structure(to, interp_dim.multiplicities),
+    )
+end
 
 function BSplineInterpolationDimension(
         t, degree;
