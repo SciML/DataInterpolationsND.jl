@@ -1,11 +1,6 @@
 using SciMLTesting, DataInterpolationsND, Test
 
-run_qa(
-    DataInterpolationsND;
-    # `@adapt_structure` is a non-public (un-`public`-declared) macro of Adapt;
-    # ignore until Adapt marks it public.
-    ei_kwargs = (; all_explicit_imports_are_public = (; ignore = (Symbol("@adapt_structure"),))),
-)
+run_qa(DataInterpolationsND)
 
 # JET is run as a targeted analysis (report_call / report_opt on the public
 # entry points) rather than via run_qa's JET.test_package path: typo-mode

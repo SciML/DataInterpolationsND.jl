@@ -1,7 +1,7 @@
 module DataInterpolationsND
 using KernelAbstractions: KernelAbstractions, @Const, @index, @kernel, get_backend,
     synchronize
-using Adapt: @adapt_structure
+import Adapt: adapt_structure
 using EllipsisNotation: EllipsisNotation, (..)
 using RecipesBase: RecipesBase, @recipe, @series
 
@@ -55,7 +55,13 @@ function NDInterpolation(u, interp_dims; cache = EmptyCache())
     return NDInterpolation(u, interp_dims, cache)
 end
 
-@adapt_structure NDInterpolation
+function adapt_structure(to, interp::NDInterpolation)
+    return NDInterpolation(
+        adapt_structure(to, interp.u),
+        adapt_structure(to, interp.interp_dims),
+        adapt_structure(to, interp.cache),
+    )
+end
 
 include("interpolation_dimensions.jl")
 include("spline_utils.jl")
