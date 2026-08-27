@@ -2,8 +2,9 @@ module DataInterpolationsNDSymbolicsExt
 
 import DataInterpolationsND
 using DataInterpolationsND: NDInterpolation
-using Symbolics: Symbolics, Num, unwrap, @register_derivative
+using Symbolics: Symbolics, Num, @register_derivative
 import SymbolicUtils
+using SymbolicUtils: unwrap
 
 struct DifferentiatedNDInterpolation{N_in, N_out, I <: NDInterpolation{N_in, N_out}}
     interp::I

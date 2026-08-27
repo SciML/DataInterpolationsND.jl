@@ -1,7 +1,7 @@
 using DataInterpolationsND
 using Symbolics
 import SymbolicUtils as SU
-using Symbolics: unwrap
+using SymbolicUtils: unwrap
 using Test
 
 t1 = cumsum(rand(5))
