@@ -55,6 +55,17 @@ end
     )
     itp = NDInterpolation(u, itp_dims)
     test_derivatives(itp)
+
+    for t in Iterators.product(t1, t2)
+        idx = DataInterpolationsND.get_idx(itp.interp_dims, t)
+        @test idx ==
+            DataInterpolationsND.get_idx(itp.interp_dims, (ForwardDiff.Dual(t[1], 1.0), t[2]))
+        @test idx ==
+            DataInterpolationsND.get_idx(itp.interp_dims, (t[1], ForwardDiff.Dual(t[2], 1.0)))
+        @test idx == DataInterpolationsND.get_idx(
+            itp.interp_dims, (ForwardDiff.Dual(t[1], -1.0), t[2])
+        )
+    end
 end
 
 @testset "BSpline interpolation" begin

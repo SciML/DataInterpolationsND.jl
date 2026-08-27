@@ -47,7 +47,9 @@ function _interpolate!(
         multi_point_index
     ) where {N_in, N_out, ID <: ConstantInterpolationDimension}
     if any(>(0), derivative_orders)
-        return if any(i -> !isempty(searchsorted(A.interp_dims[i].t, t[i])), 1:N_in)
+        return if any(
+                i -> !isempty(searchsorted(A.interp_dims[i].t, search_value(t[i]))), 1:N_in
+            )
             typed_nan(out)
         else
             out
@@ -55,7 +57,7 @@ function _interpolate!(
     end
     # Use a new variable to avoid shadowing/capturing idx in the ntuple closure
     idx_adjusted = ntuple(N_in) do i
-        t[i] >= A.interp_dims[i].t[end] ? length(A.interp_dims[i].t) : idx[i]
+        search_value(t[i]) >= A.interp_dims[i].t[end] ? length(A.interp_dims[i].t) : idx[i]
     end
     if iszero(N_out)
         out = A.u[idx_adjusted...]

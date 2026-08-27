@@ -1,8 +1,8 @@
 using SciMLTesting, DataInterpolationsND, Test
 
 # ExplicitImports only sees an extension module once its triggers are loaded, so the
-# weakdeps have to be brought in here for DataInterpolationsNDSymbolicsExt to be checked.
-using SymbolicUtils, Symbolics
+# weakdeps have to be brought in here for the extensions to be checked.
+using ForwardDiff, SymbolicUtils, Symbolics
 
 run_qa(
     DataInterpolationsND;
@@ -17,9 +17,12 @@ run_qa(
                 # Symbolics: `SymbolicT` is the unwrapped symbolic type the generated
                 # interpolation call methods dispatch on; there is no public spelling.
                 :SymbolicT,
-                # DataInterpolationsND's own internal helper, reached from its own
-                # extension module.
-                :get_output_size,
+                # DataInterpolationsND's own internal helpers, reached from its own
+                # extension modules.
+                :get_output_size, :search_value,
+                # ForwardDiff: Dual and its primal accessor are not marked public;
+                # keep them allowed until ForwardDiff declares them public.
+                :Dual, :value,
             ),
         ),
     ),

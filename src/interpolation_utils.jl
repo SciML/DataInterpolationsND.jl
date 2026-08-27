@@ -112,6 +112,9 @@ end
 get_idx_shift(::AbstractInterpolationDimension) = 0
 get_idx_shift(::LinearInterpolationDimension) = -1
 
+# ForwardDiff 1 Dual comparisons include partials; search on the primal (see ForwardDiff ext).
+search_value(x) = x
+
 # TODO: Implement a more efficient (GPU compatible) version
 function get_idx(
         interp_dim::AbstractInterpolationDimension,
@@ -122,14 +125,15 @@ function get_idx(
     else
         interp_dim.t
     end
+    t_query = search_value(t_eval)
     left = get_left(interp_dim)
     lb, ub_shift = get_idx_bounds(interp_dim)
     idx_shift = get_idx_shift(interp_dim)
     ub = length(t) + ub_shift
     return if left
-        clamp(searchsortedfirst(t, t_eval) + idx_shift, lb, ub)
+        clamp(searchsortedfirst(t, t_query) + idx_shift, lb, ub)
     else
-        clamp(searchsortedlast(t, t_eval) + idx_shift, lb, ub)
+        clamp(searchsortedlast(t, t_query) + idx_shift, lb, ub)
     end
 end
 
