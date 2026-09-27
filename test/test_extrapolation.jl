@@ -103,6 +103,12 @@ end
     end
     interp = NDInterpolation([0.0, 0.0, 1.0], BSplineInterpolationDimension([0.0, 1.0], 2))
     @test interp(2.0) == 4.0
+    dim = BSplineInterpolationDimension([0.0, 1.0], 0; extrapolation = ExtrapolationType.Linear)
+    interp = NDInterpolation([3.0], dim)
+    for t in (-1.0, 2.0)
+        @test interp(t) == 3.0
+        @test interp(t; derivative_orders = (1,)) == 0.0
+    end
 end
 
 @testset "Constant dimensions and NURBS" begin

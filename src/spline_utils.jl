@@ -79,6 +79,15 @@ function get_basis_function_values(
     if derivative_order > degree
         return ntuple(_ -> _zero, degree_plus_1)
     end
+    iszero(degree) && return (_one,)
+
+    degree_plus_2 = degree + 2
+
+    # Degree 0 basis function values
+    basis_function_values = ntuple(
+        k -> (k == degree_plus_1) ? _one : _zero,
+        degree_plus_2
+    )
 
     boundary, mode, outside = extrapolation_boundary(itp_dim, t)
     t_eval = t
@@ -89,20 +98,16 @@ function get_basis_function_values(
         else
             derivative_order > 1 && return ntuple(_ -> _zero, degree_plus_1)
             edge = boundary + zero(t)
-            slope = get_basis_function_values(itp_dim, edge, idx, 1, nothing, dim_in)
-            derivative_order == 1 && return slope
-            values = get_basis_function_values(itp_dim, edge, idx, 0, nothing, dim_in)
+            slope = _compute_basis_function_values(
+                basis_function_values, knots_all, edge, idx, degree, 1, degree_plus_2
+            )
+            derivative_order == 1 && return slope[1:degree_plus_1]
+            values = _compute_basis_function_values(
+                basis_function_values, knots_all, edge, idx, degree, 0, degree_plus_2
+            )
             return ntuple(i -> values[i] + (t - edge) * slope[i], degree_plus_1)
         end
     end
-
-    degree_plus_2 = degree + 2
-
-    # Degree 0 basis function values
-    basis_function_values = ntuple(
-        k -> (k == degree_plus_1) ? _one : _zero,
-        degree_plus_2
-    )
 
     # Higher order basis function values
     # Use a helper function to avoid capturing mutable variables in closures
