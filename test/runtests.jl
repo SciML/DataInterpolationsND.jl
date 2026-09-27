@@ -2,6 +2,7 @@ using SafeTestsets, SciMLTesting
 
 run_tests(;
     core = () -> begin
+        @safetestset "Extrapolation" include("test_extrapolation.jl")
         @safetestset "Interpolations" include("test_interpolations.jl")
         @safetestset "Derivatives" include("test_derivatives.jl")
         @safetestset "DataInterpolations" include("test_datainterpolations_comparison.jl")

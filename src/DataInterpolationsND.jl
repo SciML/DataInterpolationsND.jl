@@ -63,6 +63,7 @@ function adapt_structure(to, interp::NDInterpolation)
     )
 end
 
+include("extrapolation.jl")
 include("interpolation_dimensions.jl")
 include("spline_utils.jl")
 include("interpolation_utils.jl")
@@ -99,7 +100,7 @@ function (interp::NDInterpolation)(t::Tuple{Vararg{Number}}; kwargs...)
     return interp(out, t; kwargs...)
 end
 
-export NDInterpolation, LinearInterpolationDimension, ConstantInterpolationDimension,
+export ExtrapolationType, NDInterpolation, LinearInterpolationDimension, ConstantInterpolationDimension,
     BSplineInterpolationDimension, NURBSWeights,
     eval_unstructured, eval_unstructured!, eval_grid, eval_grid!
 

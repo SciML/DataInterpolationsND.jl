@@ -1,7 +1,9 @@
 """
-    LinearInterpolationDimension(t; t_eval = similar(t, 0))
+    LinearInterpolationDimension(t; t_eval = similar(t, 0),
+        extrapolation::ExtrapolationType.T = ExtrapolationType.Linear)
 
 Interpolation dimension for linear interpolation between the data points.
+Both sides default to `ExtrapolationType.Linear`.
 
 ## Arguments
 
@@ -9,6 +11,7 @@ Interpolation dimension for linear interpolation between the data points.
 
 ## Keyword arguments
 
+  - `extrapolation`: An [`ExtrapolationType`](@ref) mode applied on both sides of this dimension.
   - `t_eval`: A vector (like) of time evaluation points for efficient evaluation of multiple points,
     see `eval_unstructured` and `eval_grid`. Defaults to no points.
 """
@@ -20,9 +23,13 @@ struct LinearInterpolationDimension{
     t::tType
     t_eval::t_evalType
     idx_eval::idxType
-    function LinearInterpolationDimension(t, t_eval, idx_eval)
+    extrapolation::ExtrapolationType.T
+    function LinearInterpolationDimension(
+            t, t_eval, idx_eval,
+            extrapolation::ExtrapolationType.T = ExtrapolationType.Linear
+        )
         validate_t(t)
-        return new{typeof(t), typeof(t_eval), typeof(idx_eval)}(t, t_eval, idx_eval)
+        return new{typeof(t), typeof(t_eval), typeof(idx_eval)}(t, t_eval, idx_eval, extrapolation)
     end
 end
 
@@ -31,22 +38,28 @@ function adapt_structure(to, interp_dim::LinearInterpolationDimension)
         adapt_structure(to, interp_dim.t),
         adapt_structure(to, interp_dim.t_eval),
         adapt_structure(to, interp_dim.idx_eval),
+        interp_dim.extrapolation,
     )
 end
 
-function LinearInterpolationDimension(t; t_eval = similar(t, 0))
+function LinearInterpolationDimension(
+        t; t_eval = similar(t, 0),
+        extrapolation::ExtrapolationType.T = ExtrapolationType.Linear
+    )
     idx_eval = similar(t_eval, Int)
     itp_dim = LinearInterpolationDimension(
-        t, t_eval, idx_eval
+        t, t_eval, idx_eval, extrapolation
     )
     set_eval_idx!(itp_dim)
     return itp_dim
 end
 
 """
-    ConstantInterpolationDimension(t; t_eval = similar(t, 0), left = true)
+    ConstantInterpolationDimension(t; t_eval = similar(t, 0), left = true,
+        extrapolation::ExtrapolationType.T = ExtrapolationType.Constant)
 
 Interpolation dimension for constant interpolation between the data points.
+Both sides default to `ExtrapolationType.Constant`; all supported modes hold the edge value.
 
 ## Arguments
 
@@ -55,6 +68,7 @@ Interpolation dimension for constant interpolation between the data points.
 ## Keyword arguments
 
   - `left`: Whether the interpolation looks to the left of the evaluation `t` for the value. Defaults to `true`.
+  - `extrapolation`: An [`ExtrapolationType`](@ref) mode applied on both sides of this dimension.
   - `t_eval`: A vector (like) of time evaluation points for efficient evaluation of multiple points,
     see `eval_unstructured` and `eval_grid`. Defaults to no points.
 """
@@ -67,10 +81,14 @@ struct ConstantInterpolationDimension{
     left::Bool
     t_eval::t_evalType
     idx_eval::idxType
-    function ConstantInterpolationDimension(t, left, t_eval, idx_eval)
+    extrapolation::ExtrapolationType.T
+    function ConstantInterpolationDimension(
+            t, left, t_eval, idx_eval,
+            extrapolation::ExtrapolationType.T = ExtrapolationType.Constant
+        )
         validate_t(t)
         return new{typeof(t), typeof(t_eval), typeof(idx_eval)}(
-            t, left, t_eval, idx_eval
+            t, left, t_eval, idx_eval, extrapolation
         )
     end
 end
@@ -81,13 +99,17 @@ function adapt_structure(to, interp_dim::ConstantInterpolationDimension)
         adapt_structure(to, interp_dim.left),
         adapt_structure(to, interp_dim.t_eval),
         adapt_structure(to, interp_dim.idx_eval),
+        interp_dim.extrapolation,
     )
 end
 
-function ConstantInterpolationDimension(t; left = true, t_eval = similar(t, 0))
+function ConstantInterpolationDimension(
+        t; left = true, t_eval = similar(t, 0),
+        extrapolation::ExtrapolationType.T = ExtrapolationType.Constant
+    )
     idx_eval = similar(t_eval, Int)
     itp_dim = ConstantInterpolationDimension(
-        t, left, t_eval, idx_eval
+        t, left, t_eval, idx_eval, extrapolation
     )
     set_eval_idx!(itp_dim)
     return itp_dim
@@ -98,10 +120,12 @@ end
         t, degree;
         t_eval = similar(t, 0),
         max_derivative_order_eval::Integer = 0,
-        multiplicities::Union{AbstractVector{<:Integer}, Nothing} = nothing)
+        multiplicities::Union{AbstractVector{<:Integer}, Nothing} = nothing,
+        extrapolation::ExtrapolationType.T = ExtrapolationType.Extension)
 
 Interpolation dimension for BSpline or NURBS interpolation between the data points, used for evaluating
-the BSpline basis functions.
+the BSpline basis functions. Both sides default to `ExtrapolationType.Extension`.
+`ExtrapolationType.Linear` extends the boundary tangent and is not supported with `NURBSWeights`.
 
 ## Arguments
 
@@ -110,6 +134,7 @@ the BSpline basis functions.
 
 ## Keyword arguments
 
+  - `extrapolation`: An [`ExtrapolationType`](@ref) mode applied on both sides of this dimension.
   - `t_eval`: A vector (like) of time evaluation points for efficient evaluation of multiple points,
     see `eval_unstructured` and `eval_grid`. Defaults to no points.
   - `max_derivative_order_eval`: The maximum derivative order for which the basis functions will be precomputed
@@ -131,9 +156,11 @@ struct BSplineInterpolationDimension{
     max_derivative_order_eval::Int
     basis_function_eval::evalType
     multiplicities::mType
+    extrapolation::ExtrapolationType.T
     function BSplineInterpolationDimension(
             t, knots_all, t_eval, idx_eval, degree, max_derivative_order_eval,
-            basis_function_eval, multiplicities
+            basis_function_eval, multiplicities,
+            extrapolation::ExtrapolationType.T = ExtrapolationType.Extension
         )
         validate_t(t)
         return new{
@@ -141,7 +168,7 @@ struct BSplineInterpolationDimension{
             typeof(basis_function_eval), typeof(multiplicities),
         }(
             t, knots_all, t_eval, idx_eval, degree, max_derivative_order_eval,
-            basis_function_eval, multiplicities
+            basis_function_eval, multiplicities, extrapolation
         )
     end
 end
@@ -156,6 +183,7 @@ function adapt_structure(to, interp_dim::BSplineInterpolationDimension)
         adapt_structure(to, interp_dim.max_derivative_order_eval),
         adapt_structure(to, interp_dim.basis_function_eval),
         adapt_structure(to, interp_dim.multiplicities),
+        interp_dim.extrapolation,
     )
 end
 
@@ -163,7 +191,8 @@ function BSplineInterpolationDimension(
         t, degree;
         t_eval = similar(t, 0),
         max_derivative_order_eval::Integer = 0,
-        multiplicities::Union{AbstractVector{<:Integer}, Nothing} = nothing
+        multiplicities::Union{AbstractVector{<:Integer}, Nothing} = nothing,
+        extrapolation::ExtrapolationType.T = ExtrapolationType.Extension
     )
     if isnothing(multiplicities)
         # Multiplicities for open/clamped knot vector if no multiplicities are provided
@@ -196,7 +225,7 @@ function BSplineInterpolationDimension(
     )
     itp_dim = BSplineInterpolationDimension(
         t, knots_all, t_eval, idx_eval, degree, max_derivative_order_eval,
-        basis_function_eval, multiplicities
+        basis_function_eval, multiplicities, extrapolation
     )
     set_eval_idx!(itp_dim)
     set_basis_function_eval!(itp_dim)
