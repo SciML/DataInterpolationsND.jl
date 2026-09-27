@@ -56,32 +56,47 @@ using Test
         end
         adapted = Adapt.adapt(Array, interp)
         @test adapted(-1.0, 6.0) == interp(-1.0, 6.0)
-        @test adapted.interp_dims[1].extrapolation_left == xmode
-        @test adapted.interp_dims[2].extrapolation_right == ymode
+        @test adapted.interp_dims[1].extrapolation == xmode
+        @test adapted.interp_dims[2].extrapolation == ymode
     end
 end
 
-@testset "Independent sides and boundary derivatives" begin
-    for (left, right, expected) in (
-            (ExtrapolationType.Constant, ExtrapolationType.Linear, (0.0, 3.0)),
-            (ExtrapolationType.Linear, ExtrapolationType.Constant, (-1.0, 2.0)),
-        )
-        dim = LinearInterpolationDimension([0.0, 1.0, 2.0]; extrapolation_left = left, extrapolation_right = right)
+@testset "Dimension extrapolation keyword" begin
+    constructors = (
+        (LinearInterpolationDimension, ExtrapolationType.Linear, (-1.0, 3.0)),
+        (ConstantInterpolationDimension, ExtrapolationType.Constant, (0.0, 2.0)),
+        ((t; kw...) -> BSplineInterpolationDimension(t, 1; kw...), ExtrapolationType.Extension, (-1.0, 3.0)),
+    )
+    for (constructor, default_mode, expected) in constructors
+        dim = constructor([0.0, 1.0, 2.0])
+        @test dim.extrapolation == default_mode
         interp = NDInterpolation([0.0, 1.0, 2.0], dim)
         @test (interp(-1.0), interp(3.0)) == expected
-        for boundary in (0.0, 2.0)
-            @test interp(boundary; derivative_orders = (1,)) == 1.0
-            @test ForwardDiff.derivative(interp, boundary) == 1.0
+        @test_throws TypeError constructor([0.0, 1.0]; extrapolation = nothing)
+        for mode in (ExtrapolationType.Constant, ExtrapolationType.Linear, ExtrapolationType.Extension)
+            dim = constructor([0.0, 1.0, 2.0]; extrapolation = mode)
+            @test dim.extrapolation == mode
+            @test Adapt.adapt(Array, dim).extrapolation == mode
+            interp = NDInterpolation([0.0, 1.0, 2.0], dim)
+            expected = mode == ExtrapolationType.Constant || constructor === ConstantInterpolationDimension ? (0.0, 2.0) : (-1.0, 3.0)
+            @test (interp(-1.0), interp(3.0)) == expected
         end
-    end
-    dim = LinearInterpolationDimension([0.0, 1.0]; extrapolation = ExtrapolationType.Constant, extrapolation_right = ExtrapolationType.Linear)
-    @test NDInterpolation([0.0, 1.0], dim)(2.0) == 1.0
-    @test NDInterpolation([0.0, 1.0], LinearInterpolationDimension([0.0, 1.0]))(2.0) == 2.0
-    for constructor in (LinearInterpolationDimension, (t; kw...) -> BSplineInterpolationDimension(t, 1; kw...))
         dim = constructor([0.5, 1.5]; extrapolation = ExtrapolationType.Constant)
         interp = NDInterpolation([2.0, 4.0], dim)
         @test interp(0) == 2.0
         @test interp(2) == 4.0
+    end
+end
+
+@testset "Boundary derivatives" begin
+    for constructor in (LinearInterpolationDimension, (t; kw...) -> BSplineInterpolationDimension(t, 1; kw...)),
+            mode in (ExtrapolationType.Constant, ExtrapolationType.Linear, ExtrapolationType.Extension)
+        dim = constructor([0.0, 1.0, 2.0]; extrapolation = mode)
+        interp = NDInterpolation([0.0, 1.0, 2.0], dim)
+        for boundary in (0.0, 2.0)
+            @test interp(boundary; derivative_orders = (1,)) == 1.0
+            @test ForwardDiff.derivative(interp, boundary) == 1.0
+        end
     end
 end
 

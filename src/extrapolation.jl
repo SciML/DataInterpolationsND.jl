@@ -2,8 +2,8 @@
     ExtrapolationType
 
 Extrapolation modes for each interpolation dimension, using the naming convention of
-DataInterpolations.jl. Set `extrapolation` for both sides, or set `extrapolation_left`
-and `extrapolation_right` independently. An explicit `extrapolation` overrides both sides.
+DataInterpolations.jl. The `extrapolation::ExtrapolationType.T` keyword sets the mode
+for both sides of a dimension. Different dimensions can use different modes.
 
   - `ExtrapolationType.Constant`: hold the boundary value. Derivatives along an axis
     strictly outside its grid are zero; derivatives at the boundary use the interpolation.
@@ -25,16 +25,12 @@ module ExtrapolationType
     export T, Constant, Linear, Extension
 end
 
-function extrapolation_modes(extrapolation, left, right)
-    return isnothing(extrapolation) ? (left, right) : (extrapolation, extrapolation)
-end
-
 function extrapolation_boundary(dim, t)
     value = search_value(t)
     return if value < first(dim.t)
-        first(dim.t), dim.extrapolation_left, true
+        first(dim.t), dim.extrapolation, true
     elseif value > last(dim.t)
-        last(dim.t), dim.extrapolation_right, true
+        last(dim.t), dim.extrapolation, true
     else
         value, ExtrapolationType.Extension, false
     end

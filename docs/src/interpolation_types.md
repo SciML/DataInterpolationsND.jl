@@ -31,8 +31,8 @@ heatmap(out)
 
 ## Extrapolation
 
-Each dimension accepts `extrapolation`, `extrapolation_left`, and `extrapolation_right`.
-An explicit `extrapolation` sets both sides and overrides the side keywords. The
+Each dimension accepts one `extrapolation::ExtrapolationType.T` keyword. Its mode
+applies on both sides of that dimension; different dimensions can use different modes. The
 [`ExtrapolationType`](@ref) namespace follows DataInterpolations.jl's mode names;
 it is provided by DataInterpolationsND without a runtime dependency on DataInterpolations.
 
@@ -49,7 +49,7 @@ voltage = NDInterpolation(
     voltages,
     (
         LinearInterpolationDimension(soc; extrapolation = ExtrapolationType.Constant),
-        LinearInterpolationDimension(temperatures; extrapolation_right = ExtrapolationType.Constant),
+        LinearInterpolationDimension(temperatures; extrapolation = ExtrapolationType.Constant),
     )
 )
 (voltage(1.2, 25.0), voltage(-0.2, 0.0), voltage(0.5, 40.0))

@@ -59,7 +59,7 @@ function validate_cache(
         u::AbstractArray
     ) where {N_in}
     size_expected = size(u)[1:N_in]
-    if any(dim -> dim.extrapolation_left == ExtrapolationType.Linear || dim.extrapolation_right == ExtrapolationType.Linear, interp_dims)
+    if any(dim -> dim.extrapolation == ExtrapolationType.Linear, interp_dims)
         throw(ArgumentError("Linear extrapolation is not supported with NURBSWeights; use Constant or Extension."))
     end
     return @assert size(nurbs_weights.weights) == size_expected "The size of the weights array must match the length of the first N_in dimensions of u ($size_expected)."
