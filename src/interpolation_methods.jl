@@ -9,6 +9,10 @@ function _interpolate!(
     out = make_zero!!(out)
     any(>(1), derivative_orders) && return out
 
+    held = ntuple(i -> hold_edge(A.interp_dims[i], t[i]), N_in)
+    any(i -> held[i][2] && derivative_orders[i] > 0, 1:N_in) && return out
+    t_eval = ntuple(i -> held[i][1], N_in)
+
     tᵢ = ntuple(i -> A.interp_dims[i].t[idx[i]], N_in)
     tᵢ₊₁ = ntuple(i -> A.interp_dims[i].t[idx[i] + 1], N_in)
 
@@ -21,7 +25,7 @@ function _interpolate!(
     # Loop over the corners of the (hyper)rectangle `t` is in
     for I in Iterators.product(ntuple(i -> (false, true), N_in)...)
         c = eltype(out)(inv(t_vol))
-        for (t_, right_point, d, t₁, t₂) in zip(t, I, derivative_orders, tᵢ, tᵢ₊₁)
+        for (t_, right_point, d, t₁, t₂) in zip(t_eval, I, derivative_orders, tᵢ, tᵢ₊₁)
             c *= if right_point
                 iszero(d) ? t_ - t₁ : one(t_)
             else
@@ -47,6 +51,9 @@ function _interpolate!(
         multi_point_index
     ) where {N_in, N_out, ID <: ConstantInterpolationDimension}
     if any(>(0), derivative_orders)
+        if any(i -> derivative_orders[i] > 0 && extrapolation_boundary(A.interp_dims[i], t[i])[3], 1:N_in)
+            return make_zero!!(out)
+        end
         return if any(
                 i -> !isempty(searchsorted(A.interp_dims[i].t, search_value(t[i]))), 1:N_in
             )

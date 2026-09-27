@@ -8,6 +8,11 @@ LinearInterpolationDimension
 ConstantInterpolationDimension
 BSplineInterpolationDimension
 NURBSWeights
+ExtrapolationType
+ExtrapolationType.T
+ExtrapolationType.Constant
+ExtrapolationType.Linear
+ExtrapolationType.Extension
 ```
 
 ## Multi-point evaluation
