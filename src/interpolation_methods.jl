@@ -72,7 +72,7 @@ function _interpolate!(
             )
             typed_nan(out)
         else
-            out
+            make_zero!!(out)
         end
     end
     # Use a new variable to avoid shadowing/capturing idx in the ntuple closure

@@ -142,6 +142,9 @@ end
         out = [NaN]
         vector_interp(out, (-1.0,); derivative_orders = (1,))
         @test out == [0.0]
+        out = [NaN]
+        vector_interp(out, (0.5,); derivative_orders = (1,))
+        @test out == [0.0]
     end
     dim = BSplineInterpolationDimension([0.0, 1.0], 2; t_eval = [-1.0, 2.0], extrapolation = ExtrapolationType.Constant)
     interp = NDInterpolation([2.0, 4.0, 7.0], dim; cache = NURBSWeights([1.0, 2.0, 1.0]))
