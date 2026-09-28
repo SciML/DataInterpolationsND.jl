@@ -128,6 +128,7 @@ end
 Interpolation dimension for BSpline or NURBS interpolation between the data points, used for evaluating
 the BSpline basis functions. Both sides default to `ExtrapolationType.Extension`.
 `ExtrapolationType.Linear` extends the boundary tangent and is not supported with `NURBSWeights`.
+`t` must contain at least two knots; otherwise an `ArgumentError` is thrown.
 
 ## Arguments
 
@@ -195,6 +196,11 @@ function BSplineInterpolationDimension(
         max_derivative_order_eval::Integer = 0,
         multiplicities::Union{AbstractVector{<:Integer}, Nothing} = nothing,
         extrapolation::ExtrapolationType.T = ExtrapolationType.Extension
+    )
+    length(t) < 2 && throw(
+        ArgumentError(
+            "BSplineInterpolationDimension needs at least 2 knots in `t`, got $(length(t)). Use LinearInterpolationDimension or ConstantInterpolationDimension for an axis with a single breakpoint."
+        )
     )
     if isnothing(multiplicities)
         # Multiplicities for open/clamped knot vector if no multiplicities are provided

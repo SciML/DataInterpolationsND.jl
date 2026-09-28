@@ -220,4 +220,7 @@ end
             @test interp_1d(s; derivative_orders = (1,)) == 0.0
         end
     end
+    for degree in 0:3
+        @test_throws ArgumentError BSplineInterpolationDimension([298.15], degree)
+    end
 end
