@@ -132,7 +132,7 @@ function get_idx(
     left = get_left(interp_dim)
     lb, ub_shift = get_idx_bounds(interp_dim)
     idx_shift = get_idx_shift(interp_dim)
-    ub = length(t) + ub_shift
+    ub = max(length(t) + ub_shift, lb)
     return if left
         clamp(searchsortedfirst(t, t_query) + idx_shift, lb, ub)
     else

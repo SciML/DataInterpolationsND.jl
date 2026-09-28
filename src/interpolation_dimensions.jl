@@ -4,6 +4,7 @@
 
 Interpolation dimension for linear interpolation between the data points.
 Both sides default to `ExtrapolationType.Linear`.
+If `t` has a single point, the interpolation is constant along this dimension for every extrapolation mode, and derivatives along it are zero.
 
 ## Arguments
 
@@ -60,6 +61,7 @@ end
 
 Interpolation dimension for constant interpolation between the data points.
 Both sides default to `ExtrapolationType.Constant`; all supported modes hold the edge value.
+If `t` has a single point, the interpolation is constant along this dimension for every extrapolation mode, and derivatives along it are zero.
 
 ## Arguments
 

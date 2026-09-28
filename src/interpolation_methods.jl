@@ -10,23 +10,29 @@ function _interpolate!(
     any(>(1), derivative_orders) && return out
 
     held = ntuple(i -> hold_edge(A.interp_dims[i], t[i]), N_in)
-    any(i -> held[i][2] && derivative_orders[i] > 0, 1:N_in) && return out
+    single = ntuple(i -> isone(length(A.interp_dims[i].t)), N_in)
+    any(i -> (held[i][2] || single[i]) && derivative_orders[i] > 0, 1:N_in) && return out
     t_eval = ntuple(i -> held[i][1], N_in)
 
     tᵢ = ntuple(i -> A.interp_dims[i].t[idx[i]], N_in)
-    tᵢ₊₁ = ntuple(i -> A.interp_dims[i].t[idx[i] + 1], N_in)
+    tᵢ₊₁ = ntuple(i -> A.interp_dims[i].t[idx[i] + !single[i]], N_in)
 
     # Size of the (hyper)rectangle `t` is in
     t_vol = one(eltype(tᵢ))
-    for (t₁, t₂) in zip(tᵢ, tᵢ₊₁)
-        t_vol *= t₂ - t₁
+    for (t₁, t₂, s) in zip(tᵢ, tᵢ₊₁, single)
+        s || (t_vol *= t₂ - t₁)
     end
 
     # Loop over the corners of the (hyper)rectangle `t` is in
     for I in Iterators.product(ntuple(i -> (false, true), N_in)...)
+        any(i -> single[i] && I[i], 1:N_in) && continue
         c = eltype(out)(inv(t_vol))
-        for (t_, right_point, d, t₁, t₂) in zip(t_eval, I, derivative_orders, tᵢ, tᵢ₊₁)
-            c *= if right_point
+        for (t_, right_point, d, t₁, t₂, s) in zip(
+                t_eval, I, derivative_orders, tᵢ, tᵢ₊₁, single
+            )
+            c *= if s
+                one(t_)
+            elseif right_point
                 iszero(d) ? t_ - t₁ : one(t_)
             else
                 iszero(d) ? t₂ - t_ : -one(t_)
@@ -51,11 +57,18 @@ function _interpolate!(
         multi_point_index
     ) where {N_in, N_out, ID <: ConstantInterpolationDimension}
     if any(>(0), derivative_orders)
-        if any(i -> derivative_orders[i] > 0 && extrapolation_boundary(A.interp_dims[i], t[i])[3], 1:N_in)
+        if any(
+                i -> derivative_orders[i] > 0 &&
+                    (isone(length(A.interp_dims[i].t)) ||
+                        extrapolation_boundary(A.interp_dims[i], t[i])[3]),
+                1:N_in
+            )
             return make_zero!!(out)
         end
         return if any(
-                i -> !isempty(searchsorted(A.interp_dims[i].t, search_value(t[i]))), 1:N_in
+                i -> !isone(length(A.interp_dims[i].t)) &&
+                    !isempty(searchsorted(A.interp_dims[i].t, search_value(t[i]))),
+                1:N_in
             )
             typed_nan(out)
         else
@@ -69,7 +82,7 @@ function _interpolate!(
     if iszero(N_out)
         out = A.u[idx_adjusted...]
     else
-        out .= A.u[idx_adjusted...]
+        out .= view(A.u, idx_adjusted..., ..)
     end
     return out
 end
