@@ -142,6 +142,9 @@ end
         out = [NaN]
         vector_interp(out, (-1.0,); derivative_orders = (1,))
         @test out == [0.0]
+        out = [NaN]
+        vector_interp(out, (0.5,); derivative_orders = (1,))
+        @test out == [0.0]
     end
     dim = BSplineInterpolationDimension([0.0, 1.0], 2; t_eval = [-1.0, 2.0], extrapolation = ExtrapolationType.Constant)
     interp = NDInterpolation([2.0, 4.0, 7.0], dim; cache = NURBSWeights([1.0, 2.0, 1.0]))
@@ -162,4 +165,65 @@ end
     @test nd(1.2, 25.0) ≈ 4.0
     @test nd(-0.2, 0.0) ≈ 3.0
     @test nd(0.5, 40.0) ≈ 3.6
+end
+
+@testset "Single breakpoint" begin
+    soc = [0.0, 0.5, 1.0]
+    temperature = [298.15]
+    u = reshape([3.0, 3.6, 4.2], 3, 1)
+    vector_u = cat(u, 2u; dims = 3)
+    socs_eval = [0.25, 0.75, 0.25]
+    temperatures_eval = [290.0, 298.15, 310.0]
+    for constructor in (LinearInterpolationDimension, ConstantInterpolationDimension),
+            mode in (
+                ExtrapolationType.Constant,
+                ExtrapolationType.Linear,
+                ExtrapolationType.Extension,
+            )
+        dims = (
+            constructor(soc; t_eval = socs_eval, extrapolation = mode),
+            constructor(temperature; t_eval = temperatures_eval, extrapolation = mode),
+        )
+        interp = NDInterpolation(u, dims)
+        vector_interp = NDInterpolation(vector_u, dims)
+        islinear = constructor === LinearInterpolationDimension
+        expected(s, orders) = if orders == (0, 0)
+            islinear ? 3.0 + 1.2 * s : (s < 0.5 ? 3.0 : 3.6)
+        elseif orders == (1, 0)
+            islinear ? 1.2 : 0.0
+        else
+            0.0
+        end
+        for orders in ((0, 0), (1, 0), (0, 1), (1, 1))
+            for s in (0.25, 0.75)
+                vals_T = [interp(s, T; derivative_orders = orders) for T in temperatures_eval]
+                @test allequal(vals_T)
+                @test vals_T[1] ≈ expected(s, orders)
+            end
+            out = fill(NaN, 2)
+            vector_interp(out, (0.25, 310.0); derivative_orders = orders)
+            e = expected(0.25, orders)
+            @test out ≈ [e, 2e]
+            @test eval_grid(interp; derivative_orders = orders) ≈
+                [expected(s, orders) for s in socs_eval, T in temperatures_eval]
+            @test eval_unstructured(interp; derivative_orders = orders) ≈
+                [expected(s, orders) for (s, T) in zip(socs_eval, temperatures_eval)]
+        end
+        for T in temperatures_eval
+            @test ForwardDiff.derivative(z -> interp(0.25, z), T) == 0.0
+        end
+        @test Adapt.adapt(Array, interp)(0.25, 310.0) == interp(0.25, 310.0)
+        if islinear && mode in (ExtrapolationType.Constant, ExtrapolationType.Linear)
+            @test interp(0.25, 298.15) == interp(0.25, 310.0)
+            @test interp(0.25, 298.15) ≈ 3.3
+        end
+        interp_1d = NDInterpolation([5.0], constructor([1.0]; extrapolation = mode))
+        for s in (0.0, 1.0, 2.0)
+            @test interp_1d(s) == 5.0
+            @test interp_1d(s; derivative_orders = (1,)) == 0.0
+        end
+    end
+    for degree in 0:3
+        @test_throws ArgumentError BSplineInterpolationDimension([298.15], degree)
+    end
 end
