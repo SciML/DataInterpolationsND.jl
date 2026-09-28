@@ -59,8 +59,10 @@ function _interpolate!(
     if any(>(0), derivative_orders)
         if any(
                 i -> derivative_orders[i] > 0 &&
-                    (isone(length(A.interp_dims[i].t)) ||
-                        extrapolation_boundary(A.interp_dims[i], t[i])[3]),
+                    (
+                    isone(length(A.interp_dims[i].t)) ||
+                        extrapolation_boundary(A.interp_dims[i], t[i])[3]
+                ),
                 1:N_in
             )
             return make_zero!!(out)
