@@ -20,7 +20,7 @@ DataInterpolationsNDSymbolicsExt = ["SymbolicUtils", "Symbolics"]
 
 [compat]
 Adapt = "4.3.0"
-DataInterpolations = "9"
+DataInterpolations = "9, 10.1"
 EllipsisNotation = "1.8.0"
 ForwardDiff = "1"
 KernelAbstractions = "0.9.34"
