@@ -101,8 +101,8 @@ end
 end
 
 @testset "Heterogeneous input tuples in 3D" begin
-    # `make_out` failed to dispatch on Julia 1.10 for three or more dimensions when the
-    # inputs have different types
+    # `make_out` dispatches on Julia 1.10 for three or more dimensions when the inputs
+    # have different types
     t = [0.0, 0.5, 1.0]
     interp = NDInterpolation(
         [i + 2j + 3k + i * j * k for i in 1:3, j in 1:3, k in 1:3],
