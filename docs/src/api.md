@@ -15,14 +15,19 @@ NURBSWeights
 Every dimension constructor accepts `extrapolation::ExtrapolationType.T`, which
 applies the selected mode on both sides of that dimension. The defaults are
 `Linear` for linear dimensions, `Constant` for constant dimensions, and `Extension`
-for spline dimensions.
+for spline dimensions. See the extrapolation section of
+[Interpolation types](interpolation_types.md#Extrapolation) for the multi-dimensional semantics.
 
 ```@docs
 ExtrapolationType
 ExtrapolationType.T
+ExtrapolationType.None
 ExtrapolationType.Constant
 ExtrapolationType.Linear
 ExtrapolationType.Extension
+ExtrapolationType.Periodic
+ExtrapolationType.Reflective
+DataInterpolationsND.ExtrapolationError
 ```
 
 ## Multi-point evaluation

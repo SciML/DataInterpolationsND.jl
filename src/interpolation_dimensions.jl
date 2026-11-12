@@ -3,8 +3,9 @@
         extrapolation::ExtrapolationType.T = ExtrapolationType.Linear)
 
 Interpolation dimension for linear interpolation between the data points.
-Both sides default to `ExtrapolationType.Linear`.
-If `t` has a single point, the interpolation is constant along this dimension for every extrapolation mode, and derivatives along it are zero.
+Both sides default to `ExtrapolationType.Linear`, which continues the boundary value with the boundary slope.
+If `t` has a single point, the interpolation is constant along this dimension for every extrapolation mode except
+`ExtrapolationType.None`, and derivatives along it are zero.
 
 ## Arguments
 
@@ -60,8 +61,10 @@ end
         extrapolation::ExtrapolationType.T = ExtrapolationType.Constant)
 
 Interpolation dimension for constant interpolation between the data points.
-Both sides default to `ExtrapolationType.Constant`; all supported modes hold the edge value.
-If `t` has a single point, the interpolation is constant along this dimension for every extrapolation mode, and derivatives along it are zero.
+Both sides default to `ExtrapolationType.Constant`. `Constant`, `Linear` and `Extension` hold the edge value,
+`Periodic` and `Reflective` fold the query point onto the grid and `None` throws outside the grid.
+If `t` has a single point, the interpolation is constant along this dimension for every extrapolation mode except
+`ExtrapolationType.None`, and derivatives along it are zero.
 
 ## Arguments
 
@@ -127,7 +130,7 @@ end
 
 Interpolation dimension for BSpline or NURBS interpolation between the data points, used for evaluating
 the BSpline basis functions. Both sides default to `ExtrapolationType.Extension`.
-`ExtrapolationType.Linear` extends the boundary tangent and is not supported with `NURBSWeights`.
+`ExtrapolationType.Linear` continues the boundary value with the boundary slope and is not supported with `NURBSWeights`.
 `t` must contain at least two knots; otherwise an `ArgumentError` is thrown.
 
 ## Arguments

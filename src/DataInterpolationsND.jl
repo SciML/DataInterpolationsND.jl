@@ -89,9 +89,12 @@ function (interp::NDInterpolation{N_in})(
         derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
     ) where {N_in}
     validate_derivative_orders(derivative_orders, interp)
-    idx = get_idx(interp.interp_dims, t)
+    check_extrapolation(interp.interp_dims, t)
+    t_folded, keep_sign = fold_extrapolation(interp.interp_dims, t)
+    idx = get_idx(interp.interp_dims, t_folded)
     @assert size(out) == size(interp.u)[(N_in + 1):end] "The size of out must match the size of the last N_out dimensions of u."
-    return _interpolate!(out, interp, t, idx, derivative_orders, nothing)
+    out = _interpolate!(out, interp, t_folded, idx, derivative_orders, nothing)
+    return fold_flips_sign(keep_sign, derivative_orders) ? negate!!(out) : out
 end
 
 # Out of place single input evaluation
