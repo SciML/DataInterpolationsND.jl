@@ -61,13 +61,19 @@ end
 # (Bⱼ₋ₚ ₚ, Bⱼ₋ₚ₊₁ ₚ, …, Bⱼₚ, 0)
 #
 # The trailing zero is just a convenience for the algorithm and is removed in the output
+#
+# If `reduce_degree` is `true`, then instead of the derivatives of the degree `p` basis functions
+# the values of the degree `p - derivative_order` basis functions are returned, in the last
+# `p - derivative_order + 1` entries of the output. These are the weights of the differenced
+# control points, see `differenced_control_point`.
 function get_basis_function_values(
         itp_dim::BSplineInterpolationDimension,
         t::T_t,
         idx::Integer,
         derivative_order::Integer,
         multi_point_index::Nothing,
-        dim_in::Integer
+        dim_in::Integer,
+        reduce_degree::Bool = false
     ) where {T_t <: Number}
     (; degree, knots_all) = itp_dim
     T_eval = eltype(itp_dim.basis_function_eval)
@@ -98,12 +104,18 @@ function get_basis_function_values(
         else
             derivative_order > 1 && return ntuple(_ -> _zero, degree_plus_1)
             edge = boundary + zero(t)
+            if derivative_order == 1
+                slope = _compute_basis_function_values(
+                    basis_function_values, knots_all, edge, idx, degree, 1, degree_plus_2,
+                    reduce_degree
+                )
+                return slope[1:degree_plus_1]
+            end
             slope = _compute_basis_function_values(
-                basis_function_values, knots_all, edge, idx, degree, 1, degree_plus_2
+                basis_function_values, knots_all, edge, idx, degree, 1, degree_plus_2, false
             )
-            derivative_order == 1 && return slope[1:degree_plus_1]
             values = _compute_basis_function_values(
-                basis_function_values, knots_all, edge, idx, degree, 0, degree_plus_2
+                basis_function_values, knots_all, edge, idx, degree, 0, degree_plus_2, false
             )
             return ntuple(i -> values[i] + (t - edge) * slope[i], degree_plus_1)
         end
@@ -112,7 +124,8 @@ function get_basis_function_values(
     # Higher order basis function values
     # Use a helper function to avoid capturing mutable variables in closures
     basis_function_values = _compute_basis_function_values(
-        basis_function_values, knots_all, t_eval, idx, degree, derivative_order, degree_plus_2
+        basis_function_values, knots_all, t_eval, idx, degree, derivative_order, degree_plus_2,
+        reduce_degree
     )
 
     return basis_function_values[1:degree_plus_1]
@@ -120,9 +133,12 @@ end
 
 # Helper function to avoid type instability from captured variables in closures
 function _compute_basis_function_values(
-        basis_function_values, knots_all, t, idx, degree, derivative_order, degree_plus_2
+        basis_function_values, knots_all, t, idx, degree, derivative_order, degree_plus_2,
+        reduce_degree
     )
-    for d in 1:degree
+    # Stopping after `degree - derivative_order` steps gives the lower degree basis function values
+    n_steps = reduce_degree ? degree - derivative_order : degree
+    for d in 1:n_steps
         deriv = d > degree - derivative_order
         # Create a local copy for the closure to capture
         bfv = basis_function_values
@@ -134,9 +150,25 @@ function _compute_basis_function_values(
     return basis_function_values
 end
 
-# Get the basis function values for one point in an
+# The weights of the (differenced) control points for evaluating the `derivative_order`-th
+# derivative along this dimension: the degree `p - derivative_order` basis function values,
+# see `get_basis_function_values`. For multi point evaluation these are precomputed.
+function get_spline_weights(
+        itp_dim::BSplineInterpolationDimension,
+        t::Number,
+        idx::Integer,
+        derivative_order::Integer,
+        multi_point_index::Nothing,
+        dim_in::Integer
+    )
+    return get_basis_function_values(
+        itp_dim, t, idx, derivative_order, multi_point_index, dim_in, true
+    )
+end
+
+# Get the precomputed weights for one point in an
 # unstructured multi point evaluation (given by the scalar multi point index)
-function get_basis_function_values(
+function get_spline_weights(
         itp_dim::BSplineInterpolationDimension,
         t::Number,
         idx::Integer,
@@ -150,9 +182,9 @@ function get_basis_function_values(
     )
 end
 
-# Get the basis function values for one point in a
+# Get the precomputed weights for one point in a
 # grid evaluation (given by the tuple multi point index)
-function get_basis_function_values(
+function get_spline_weights(
         itp_dim::BSplineInterpolationDimension,
         t::Number,
         idx::Integer,
@@ -166,8 +198,8 @@ function get_basis_function_values(
     )
 end
 
-# Get all basis function values to evaluate a BSpline interpolation in t
-function get_basis_function_values_all(
+# Get the weights for all dimensions to evaluate a BSpline interpolation in t
+function get_spline_weights_all(
         A::NDInterpolation{N_in, N_out, <:BSplineInterpolationDimension},
         t::Tuple{Vararg{Number, N_in}},
         idx::NTuple{N_in, <:Integer},
@@ -175,7 +207,7 @@ function get_basis_function_values_all(
         multi_point_index
     ) where {N_in, N_out}
     return ntuple(
-        dim_in -> get_basis_function_values(
+        dim_in -> get_spline_weights(
             A.interp_dims[dim_in], t[dim_in], idx[dim_in], derivative_orders[dim_in], multi_point_index, dim_in
         ),
         N_in
@@ -201,7 +233,7 @@ end
         i,
         :,
         derivative_order_plus_1,
-    ] .= get_basis_function_values(
+    ] .= get_spline_weights(
         itp_dim,
         itp_dim.t_eval[i],
         itp_dim.idx_eval[i],
@@ -234,15 +266,113 @@ function Base.getindex(bfv::BasisFunctionVector, j)
     (; itp_dim, i, derivative_order_eval) = bfv
     (; basis_function_eval, idx_eval, degree) = itp_dim
     idx = idx_eval[j]
-    return if i ≤ idx ≤ i + degree
-        basis_function_eval[j, degree + i - idx + 1, derivative_order_eval + 1]
+    T = eltype(basis_function_eval)
+    return if !(i ≤ idx ≤ i + degree)
+        zero(T)
+    elseif iszero(derivative_order_eval)
+        basis_function_eval[j, degree + i - idx + 1, 1]
     else
-        zero(eltype(basis_function_eval))
+        # For derivatives `basis_function_eval` holds the lower degree basis function values
+        T(
+            get_basis_function_values(
+                itp_dim, itp_dim.t_eval[j], idx, derivative_order_eval, nothing, 0
+            )[degree + i - idx + 1]
+        )
     end
 end
 
 function get_n_basis_functions(itp_dim::BSplineInterpolationDimension)
     return length(itp_dim.knots_all) - itp_dim.degree - 1
+end
+
+# The derivative of a B-spline is a B-spline of lower degree whose control points are scaled
+# differences of the original control points (de Boor). Along a dimension of degree `p`, the
+# control points for the `r`-th derivative are
+#
+#     Pʳᵢ = (p - r + 1) * (Pʳ⁻¹ᵢ - Pʳ⁻¹ᵢ₋₁) / (tᵢ₊ₚ₋ᵣ₊₁ - tᵢ),
+#
+# which are the coefficients of the degree `p - r` basis functions Bᵢ,ₚ₋ᵣ (with the same knots).
+# Differencing the control points before contracting them with the basis functions keeps the
+# rounding error relative to the size of the derivative, instead of relative to |P| / hᵏ as
+# when contracting the control points with the derivatives of the basis functions.
+#
+# This computes the control point with index `i` of the (mixed) differenced control net for
+# `derivative_orders` (which must not all be zero), applying the recursion per dimension.
+# `knots` and `degrees` are the `knots_all` and `degree` of the interpolation dimensions.
+# It recomputes the lower order differences it needs instead of storing them, so that it does not
+# need temporaries whose size depends on the degree.
+@inline function differenced_control_point(
+        u::AbstractArray,
+        knots::NTuple{N_in, AbstractVector},
+        degrees::NTuple{N_in, Int},
+        i::NTuple{N_in, Int},
+        derivative_orders::NTuple{N_in, Int},
+        out_index::Tuple
+    ) where {N_in}
+    order = sum(derivative_orders)
+    # Unroll the recursion for low total derivative orders, recursive function calls are slow
+    order == 1 && return _differenced_control_point(
+        u, knots, degrees, i, derivative_orders, out_index, Val(1)
+    )
+    order == 2 && return _differenced_control_point(
+        u, knots, degrees, i, derivative_orders, out_index, Val(2)
+    )
+    order == 3 && return _differenced_control_point(
+        u, knots, degrees, i, derivative_orders, out_index, Val(3)
+    )
+    return _differenced_control_point(u, knots, degrees, i, derivative_orders, out_index, order)
+end
+
+# `order` is the sum of `derivative_orders`, either as an `Int` or as a `Val`
+@inline function _differenced_control_point(
+        u, knots, degrees, i, derivative_orders, out_index, order
+    )
+    dim_in, derivative_orders_lower, i_prev = lower_difference_order(derivative_orders, i)
+    if is_one(order)
+        P = u[i..., out_index...]
+        P_prev = u[i_prev..., out_index...]
+    else
+        order_lower = minus_one(order)
+        P = _differenced_control_point(
+            u, knots, degrees, i, derivative_orders_lower, out_index, order_lower
+        )
+        P_prev = _differenced_control_point(
+            u, knots, degrees, i_prev, derivative_orders_lower, out_index, order_lower
+        )
+    end
+    # (p - r + 1) * (P - P_prev) / (tᵢ₊ₚ₋ᵣ₊₁ - tᵢ) for derivative order r
+    knots_dim = knots[dim_in]
+    i_dim = i[dim_in]
+    q = degrees[dim_in] - derivative_orders[dim_in] + 1
+    Δt = knots_dim[i_dim + q] - knots_dim[i_dim]
+    ΔP = P - P_prev
+    # Δt = 0 only for basis functions that are identically zero
+    return q * (iszero(Δt) ? zero(ΔP) / oneunit(Δt) : ΔP / Δt)
+end
+
+is_one(order::Int) = isone(order)
+is_one(::Val{order}) where {order} = isone(order)
+minus_one(order::Int) = order - 1
+minus_one(::Val{order}) where {order} = Val(order - 1)
+
+# Reduce the first nonzero derivative order by one, and give the index of the control point
+# that is subtracted in that dimension
+@inline function lower_difference_order(
+        derivative_orders::NTuple{N_in, Int}, i::NTuple{N_in, Int}
+    ) where {N_in}
+    dim_in = first_nonzero_index(derivative_orders)
+    derivative_orders_lower = ntuple(d -> derivative_orders[d] - (d == dim_in), Val(N_in))
+    i_prev = ntuple(d -> i[d] - (d == dim_in), Val(N_in))
+    return dim_in, derivative_orders_lower, i_prev
+end
+
+# Separate function so that the closures above do not capture a reassigned variable
+@inline function first_nonzero_index(x::Tuple)
+    i = 1
+    while iszero(x[i])
+        i += 1
+    end
+    return i
 end
 
 """
