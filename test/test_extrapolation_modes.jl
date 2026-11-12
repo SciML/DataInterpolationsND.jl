@@ -1,6 +1,7 @@
 using DataInterpolationsND
 using DataInterpolationsND: ExtrapolationError
 import DataInterpolations
+using ForwardDiff
 using Test
 
 const ET = ExtrapolationType
@@ -115,6 +116,75 @@ end
         [10.0, 20.0], LinearInterpolationDimension(UInt[1, 2]; extrapolation = ET.Constant)
     )
     @test interp(-1) == 10.0
+end
+
+@testset "ForwardDiff through extrapolation" begin
+    t = [0.0, 0.2, 0.5, 0.7, 0.9, 1.1]
+    u = [1.5, -5.3, 0.5, 3.3, 3.6, 1.0]
+    for mode in (ET.Linear, ET.Periodic, ET.Reflective), x in (-0.4, 1.63)
+        interp = NDInterpolation(u, LinearInterpolationDimension(t; extrapolation = mode))
+        @test ForwardDiff.derivative(interp, x) ≈ interp(x; derivative_orders = (1,))
+    end
+    interp = NDInterpolation(u, LinearInterpolationDimension(t; extrapolation = ET.None))
+    @test_throws ExtrapolationError ForwardDiff.derivative(interp, 1.2)
+end
+
+@testset "Vector valued output" begin
+    t = [0.0, 0.3, 0.7, 1.0]
+    u = [sin(i) + cos(j) for i in 1:4, j in 1:4]
+    for mode in (ET.Linear, ET.Reflective)
+        dims = (
+            LinearInterpolationDimension(t; extrapolation = mode, t_eval = [-0.45, 1.4]),
+            LinearInterpolationDimension(t; t_eval = [0.2, 1.9]),
+        )
+        scalar = NDInterpolation(u, dims)
+        vector = NDInterpolation(cat(u, 2u; dims = 3), dims)
+        @test vector(-0.45, 1.9) ≈ [1, 2] .* scalar(-0.45, 1.9)
+        @test vector(-0.45, 1.9; derivative_orders = (1, 0)) ≈
+            [1, 2] .* scalar(-0.45, 1.9; derivative_orders = (1, 0))
+        @test eval_grid(vector; derivative_orders = (1, 0))[:, :, 2] ≈
+            2 .* eval_grid(scalar; derivative_orders = (1, 0))
+    end
+end
+
+@testset "eval_unstructured outside the grid" begin
+    t = [0.0, 0.3, 0.7, 1.0]
+    u = [sin(i) + cos(j) for i in 1:4, j in 1:4]
+    xs = [-0.45, 0.4, 2.15]
+    ys = [1.6, -0.8, 0.1]
+    for modes in ((ET.Linear, ET.Linear), (ET.Periodic, ET.Reflective))
+        dims = (
+            LinearInterpolationDimension(t; extrapolation = modes[1], t_eval = xs),
+            LinearInterpolationDimension(t; extrapolation = modes[2], t_eval = ys),
+        )
+        interp = NDInterpolation(u, dims)
+        for orders in ((0, 0), (1, 1))
+            @test eval_unstructured(interp; derivative_orders = orders) ≈
+                [interp(xs[i], ys[i]; derivative_orders = orders) for i in 1:3]
+        end
+    end
+end
+
+@testset "Periodic and reflective splines" begin
+    t = [0.0, 0.5, 1.1]
+    interp = NDInterpolation(
+        [sin(i) + cos(j) + 0.1i * j for i in 1:5, j in 1:5],
+        (
+            BSplineInterpolationDimension(t, 3; extrapolation = ET.Periodic),
+            BSplineInterpolationDimension(t, 3; extrapolation = ET.Reflective),
+        )
+    )
+    x = (0.3, 0.2)
+    @test interp(x[1] + 2.2, x[2]) ≈ interp(x...)
+    @test interp(x[1] - 1.1, x[2]; derivative_orders = (1, 1)) ≈
+        interp(x...; derivative_orders = (1, 1))
+    # Mirrored copy along the reflective axis: odd derivatives change sign
+    @test interp(x[1], 2.2 - x[2]; derivative_orders = (0, 1)) ≈
+        -interp(x...; derivative_orders = (0, 1))
+    @test interp(x[1], 2.2 - x[2]; derivative_orders = (0, 2)) ≈
+        interp(x...; derivative_orders = (0, 2))
+    # Far out queries keep their phase
+    @test interp(1.0e16, x[2]) ≈ interp(mod(1.0e16, 1.1), x[2])
 end
 
 @testset "Allocation free" begin
