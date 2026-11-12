@@ -19,6 +19,8 @@ dimensions are out of range at once, the per-dimension rules compose as a tensor
   - `ExtrapolationType.Reflective`: reflect the query point back onto the grid. Odd
     derivatives along the axis change sign on mirrored copies.
 
+For `Periodic` and `Reflective`, the phase is lost once the period is below the float spacing at the query's magnitude.
+
 The mode type is `ExtrapolationType.T`.
 """
 module ExtrapolationType
@@ -86,21 +88,28 @@ return `t` unchanged (promoted with the grid element type). `keep_sign` is `fals
 mirrored copies of a reflective dimension, where odd derivatives change sign.
 """
 function fold_extrapolation(dim::AbstractInterpolationDimension, t::Number)
-    t0 = first(dim.t)
-    t1 = last(dim.t)
+    # Work in floating point so that unsigned grids do not wrap around when subtracting
+    t0 = float(first(dim.t))
+    t1 = float(last(dim.t))
     mode = dim.extrapolation
     value = search_value(t)
     if !(mode == ExtrapolationType.Periodic || mode == ExtrapolationType.Reflective) ||
             isone(length(dim.t)) || (t0 <= value <= t1)
         return t + zero(t0), true
     end
+    # A single `mod` of the offset from the grid start is exact, so far out queries keep
+    # their phase. The folded point is assembled as `(t - value) + folded_value` so that
+    # dual numbers keep their partials (with flipped sign on mirrored copies).
     period = t1 - t0
-    n = fld(value - t0, period)
-    r = t - t0 - n * period
-    return if mode == ExtrapolationType.Periodic || iszero(rem(n, 2))
-        t0 + r, true
+    offset = value - t0
+    if mode == ExtrapolationType.Periodic
+        return (t - value) + (t0 + mod(offset, period)), true
+    end
+    r = mod(offset, 2 * period)
+    return if r <= period
+        (t - value) + (t0 + r), true
     else
-        t1 - r, false
+        (value - t) + (t1 - (r - period)), false
     end
 end
 

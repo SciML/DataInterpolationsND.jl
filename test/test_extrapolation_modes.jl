@@ -110,6 +110,13 @@ end
     @test interp(0.3, 1, 0.7f0) ≈ interp(0.3, 1.0, 0.7)
 end
 
+@testset "Unsigned grid below the grid" begin
+    interp = NDInterpolation(
+        [10.0, 20.0], LinearInterpolationDimension(UInt[1, 2]; extrapolation = ET.Constant)
+    )
+    @test interp(-1) == 10.0
+end
+
 @testset "Allocation free" begin
     t = [0.0, 0.3, 0.7, 1.0]
     alloc(interp, x, orders) = @allocated interp(x; derivative_orders = orders)
