@@ -65,7 +65,7 @@ end
 # If `reduce_degree` is `true`, then instead of the derivatives of the degree `p` basis functions
 # the values of the degree `p - derivative_order` basis functions are returned, in the last
 # `p - derivative_order + 1` entries of the output. These are the weights of the differenced
-# control points, see `differenced_control_point`.
+# control points, see `differenced_contraction`.
 function get_basis_function_values(
         itp_dim::BSplineInterpolationDimension,
         t::T_t,
@@ -296,88 +296,100 @@ end
 # rounding error relative to the size of the derivative, instead of relative to |P| / hᵏ as
 # when contracting the control points with the derivatives of the basis functions.
 #
-# This computes the control point with index `i` of the (mixed) differenced control net for
-# `derivative_orders` (which must not all be zero), applying the recursion per dimension.
-# `knots` and `degrees` are the `knots_all` and `degree` of the interpolation dimensions.
-# It recomputes the lower order differences it needs instead of storing them, so that it does not
-# need temporaries whose size depends on the degree. The control points are converted to `T`
-# before differencing, so that integer control points do not wrap around and small float types do
-# not overflow.
-@inline function differenced_control_point(
-        u::AbstractArray,
-        knots::NTuple{N_in, AbstractVector},
-        degrees::NTuple{N_in, Int},
-        i::NTuple{N_in, Int},
+# This evaluates the (mixed) partial derivative given by `derivative_orders` at the point in the
+# knot span `idx`, contracted over the dimensions with a nonzero derivative order only, one
+# dimension at a time: along dimension `d` the `p + 1` local control points are differenced
+# `derivative_orders[d]` times, and the last `p - derivative_orders[d] + 1` of the results are
+# contracted with the lower degree basis function values `weights[d]`. The local control points
+# along dimension `d` are themselves such contractions over the dimensions below `d`. Along the
+# dimensions with derivative order zero the control point index is fixed to `cp_index`.
+# This is O(p * k) work per dimension, and no temporaries other than tuples of length p + 1.
+# Values are converted to `T` before differencing, so that integer control points do not wrap
+# around and small float types do not overflow.
+@inline function differenced_contraction(
+        A::NDInterpolation{N_in},
+        idx::NTuple{N_in, <:Integer},
+        cp_index::NTuple{N_in, <:Integer},
         derivative_orders::NTuple{N_in, Int},
+        weights,
         out_index::Tuple,
         ::Type{T}
     ) where {N_in, T}
-    order = sum(derivative_orders)
-    # Unroll the recursion for low total derivative orders, recursive function calls are slow
-    order == 1 && return _differenced_control_point(
-        u, knots, degrees, i, derivative_orders, out_index, T, Val(1)
-    )
-    order == 2 && return _differenced_control_point(
-        u, knots, degrees, i, derivative_orders, out_index, T, Val(2)
-    )
-    order == 3 && return _differenced_control_point(
-        u, knots, degrees, i, derivative_orders, out_index, T, Val(3)
-    )
-    return _differenced_control_point(
-        u, knots, degrees, i, derivative_orders, out_index, T, order
+    return _differenced_contraction(
+        A.u, A.interp_dims, idx, cp_index, derivative_orders, weights, out_index, T, Val(N_in), ()
     )
 end
 
-# `order` is the sum of `derivative_orders`, either as an `Int` or as a `Val`
-@inline function _differenced_control_point(
-        u, knots, degrees, i, derivative_orders, out_index, ::Type{T}, order
+# Contract along dimension `d`, with the indices of the dimensions above `d` given by `i_tail`
+@inline function _differenced_contraction(
+        u, interp_dims, idx, cp_index, derivative_orders, weights, out_index, ::Type{T},
+        ::Val{d}, i_tail
+    ) where {T, d}
+    if iszero(derivative_orders[d])
+        return local_control_point(
+            u, interp_dims, idx, cp_index, derivative_orders, weights, out_index, T, Val(d - 1),
+            (cp_index[d], i_tail...)
+        )
+    end
+    degree = interp_dims[d].degree
+    i_first = idx[d] - degree
+    control_points = ntuple(degree + 1) do j
+        i = (i_first + j - 1, i_tail...)
+        local_control_point(
+            u, interp_dims, idx, cp_index, derivative_orders, weights, out_index, T, Val(d - 1), i
+        )
+    end
+    return contract_differenced(
+        control_points, interp_dims[d].knots_all, i_first, degree, derivative_orders[d],
+        weights[d], T
+    )
+end
+
+# The local control point with index `i`: a control point of the interpolation for `d = 0`,
+# otherwise the contraction over the dimensions up to `d`
+@inline function local_control_point(
+        u, interp_dims, idx, cp_index, derivative_orders, weights, out_index, ::Type{T}, ::Val{0},
+        i
     ) where {T}
-    dim_in, derivative_orders_lower, i_prev = lower_difference_order(derivative_orders, i)
-    if is_one(order)
-        P = convert(T, u[i..., out_index...])
-        P_prev = convert(T, u[i_prev..., out_index...])
-    else
-        order_lower = minus_one(order)
-        P = _differenced_control_point(
-            u, knots, degrees, i, derivative_orders_lower, out_index, T, order_lower
-        )
-        P_prev = _differenced_control_point(
-            u, knots, degrees, i_prev, derivative_orders_lower, out_index, T, order_lower
-        )
-    end
-    # (p - r + 1) * (P - P_prev) / (tᵢ₊ₚ₋ᵣ₊₁ - tᵢ) for derivative order r
-    knots_dim = knots[dim_in]
-    i_dim = i[dim_in]
-    q = degrees[dim_in] - derivative_orders[dim_in] + 1
-    Δt = knots_dim[i_dim + q] - knots_dim[i_dim]
-    ΔP = P - P_prev
-    # Δt = 0 only for basis functions that are identically zero
-    return q * (iszero(Δt) ? zero(ΔP) / oneunit(Δt) : ΔP / Δt)
+    return convert(T, u[i..., out_index...])
 end
 
-is_one(order::Int) = isone(order)
-is_one(::Val{order}) where {order} = isone(order)
-minus_one(order::Int) = order - 1
-minus_one(::Val{order}) where {order} = Val(order - 1)
-
-# Reduce the first nonzero derivative order by one, and give the index of the control point
-# that is subtracted in that dimension
-@inline function lower_difference_order(
-        derivative_orders::NTuple{N_in, Int}, i::NTuple{N_in, Int}
-    ) where {N_in}
-    dim_in = first_nonzero_index(derivative_orders)
-    derivative_orders_lower = ntuple(d -> derivative_orders[d] - (d == dim_in), Val(N_in))
-    i_prev = ntuple(d -> i[d] - (d == dim_in), Val(N_in))
-    return dim_in, derivative_orders_lower, i_prev
+@inline function local_control_point(
+        u, interp_dims, idx, cp_index, derivative_orders, weights, out_index, ::Type{T}, ::Val{d},
+        i
+    ) where {T, d}
+    return _differenced_contraction(
+        u, interp_dims, idx, cp_index, derivative_orders, weights, out_index, T, Val(d), i
+    )
 end
 
-# Separate function so that the closures above do not capture a reassigned variable
-@inline function first_nonzero_index(x::Tuple)
-    i = 1
-    while iszero(x[i])
-        i += 1
+# Difference the local control points `derivative_order` times and contract them with `weights`
+function contract_differenced(
+        control_points::Tuple, knots, i_first, degree, derivative_order, weights, ::Type{T}
+    ) where {T}
+    for r in 1:derivative_order
+        control_points = difference_control_points(control_points, knots, i_first, degree, r)
     end
-    return i
+    out = zero(T)
+    for j in (derivative_order + 1):(degree + 1)
+        out += weights[j] * control_points[j]
+    end
+    return out
+end
+
+# One step of the recursion for the control points of the `r`-th derivative. The entry `j`
+# corresponds to the control point with index `i_first + j - 1`, the first `r` entries are unused.
+function difference_control_points(control_points::Tuple, knots, i_first, degree, r)
+    q = degree - r + 1
+    return ntuple(length(control_points)) do j
+        P = control_points[j]
+        j ≤ r && return P
+        i = i_first + j - 1
+        Δt = knots[i + q] - knots[i]
+        ΔP = P - control_points[j - 1]
+        # Δt = 0 only for basis functions that are identically zero
+        q * (iszero(Δt) ? zero(ΔP) / oneunit(Δt) : ΔP / Δt)
+    end
 end
 
 """

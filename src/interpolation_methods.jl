@@ -131,7 +131,7 @@ end
 end
 
 # BSpline partial derivative evaluation: the derivative of a BSpline is a BSpline of lower degree
-# with differenced control points, see `differenced_control_point`. The weights of these
+# with differenced control points, see `differenced_contraction`. The weights of these
 # differenced control points are the last `degree - derivative_order + 1` entries of `weights`.
 function _interpolate_derivative!(
         out,
@@ -141,24 +141,36 @@ function _interpolate_derivative!(
         degrees::NTuple{N_in, Int},
         weights
     ) where {N_in, N_out}
-    knots = ntuple(dim_in -> A.interp_dims[dim_in].knots_all, N_in)
-    # The type the control points are converted to before differencing
-    T = promote_type(eltype(A.u), map(eltype, weights)..., map(eltype, knots)...)
+    any(dim_in -> derivative_orders[dim_in] > degrees[dim_in], 1:N_in) && return out
 
+    # The type the control points are converted to before differencing
+    T = promote_type(
+        eltype(A.u),
+        map(eltype, weights)...,
+        map(dim -> eltype(dim.knots_all), A.interp_dims)...
+    )
+
+    # The dimensions with derivative order zero are contracted after differencing along the others,
+    # which keeps the rounding error relative to the size of the derivative
     for I in CartesianIndices(
-            ntuple(dim_in -> (derivative_orders[dim_in] + 1):(degrees[dim_in] + 1), N_in)
+            ntuple(
+                dim_in -> iszero(derivative_orders[dim_in]) ? (1:(degrees[dim_in] + 1)) : (1:1),
+                N_in
+            )
         )
-        B_product = prod(dim_in -> weights[dim_in][I[dim_in]], 1:N_in)
-        cp_index = ntuple(
-            dim_in -> idx[dim_in] + I[dim_in] - degrees[dim_in] - 1, N_in
+        B_product = prod(
+            dim_in -> iszero(derivative_orders[dim_in]) ? weights[dim_in][I[dim_in]] :
+                one(eltype(weights[dim_in])),
+            1:N_in
         )
+        cp_index = ntuple(dim_in -> idx[dim_in] + I[dim_in] - degrees[dim_in] - 1, N_in)
         if iszero(N_out)
             out += B_product *
-                differenced_control_point(A.u, knots, degrees, cp_index, derivative_orders, (), T)
+                differenced_contraction(A, idx, cp_index, derivative_orders, weights, (), T)
         else
             for J in CartesianIndices(out)
-                out[J] += B_product * differenced_control_point(
-                    A.u, knots, degrees, cp_index, derivative_orders, Tuple(J), T
+                out[J] += B_product * differenced_contraction(
+                    A, idx, cp_index, derivative_orders, weights, Tuple(J), T
                 )
             end
         end
