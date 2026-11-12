@@ -90,7 +90,9 @@ function _interpolate!(
 end
 
 # BSpline evaluation
-function _interpolate!(
+# Inlined, because the derivative branch would otherwise keep this from being inlined into the
+# evaluation kernels, which makes value evaluation noticeably slower in 1D.
+@inline function _interpolate!(
         out,
         A::NDInterpolation{N_in, N_out, ID},
         t::Tuple{Vararg{Number, N_in}},
@@ -102,9 +104,16 @@ function _interpolate!(
 
     out = make_zero!!(out)
     degrees = ntuple(dim_in -> interp_dims[dim_in].degree, N_in)
-    basis_function_vals = get_basis_function_values_all(
+    # For derivatives these are the lower degree basis function values (see `get_spline_weights`)
+    basis_function_vals = get_spline_weights_all(
         A, t, idx, derivative_orders, multi_point_index
     )
+
+    if any(>(0), derivative_orders)
+        return _interpolate_derivative!(
+            out, A, idx, map(Int, derivative_orders), degrees, basis_function_vals
+        )
+    end
 
     for I in CartesianIndices(ntuple(dim_in -> 1:(degrees[dim_in] + 1), N_in))
         B_product = prod(dim_in -> basis_function_vals[dim_in][I[dim_in]], 1:N_in)
@@ -115,6 +124,55 @@ function _interpolate!(
             out += B_product * A.u[cp_index...]
         else
             out .+= B_product * view(A.u, cp_index..., ..)
+        end
+    end
+
+    return out
+end
+
+# BSpline partial derivative evaluation: the derivative of a BSpline is a BSpline of lower degree
+# with differenced control points, see `differenced_contraction`. The weights of these
+# differenced control points are the last `degree - derivative_order + 1` entries of `weights`.
+function _interpolate_derivative!(
+        out,
+        A::NDInterpolation{N_in, N_out},
+        idx::NTuple{N_in, <:Integer},
+        derivative_orders::NTuple{N_in, Int},
+        degrees::NTuple{N_in, Int},
+        weights
+    ) where {N_in, N_out}
+    any(dim_in -> derivative_orders[dim_in] > degrees[dim_in], 1:N_in) && return out
+
+    # The type the control points are converted to before differencing
+    T = promote_type(
+        eltype(A.u),
+        map(eltype, weights)...,
+        map(dim -> eltype(dim.knots_all), A.interp_dims)...
+    )
+
+    # The dimensions with derivative order zero are contracted after differencing along the others,
+    # which keeps the rounding error relative to the size of the derivative
+    for I in CartesianIndices(
+            ntuple(
+                dim_in -> iszero(derivative_orders[dim_in]) ? (1:(degrees[dim_in] + 1)) : (1:1),
+                N_in
+            )
+        )
+        B_product = prod(
+            dim_in -> iszero(derivative_orders[dim_in]) ? weights[dim_in][I[dim_in]] :
+                one(eltype(weights[dim_in])),
+            1:N_in
+        )
+        cp_index = ntuple(dim_in -> idx[dim_in] + I[dim_in] - degrees[dim_in] - 1, N_in)
+        if iszero(N_out)
+            out += B_product *
+                differenced_contraction(A, idx, cp_index, derivative_orders, weights, (), T)
+        else
+            for J in CartesianIndices(out)
+                out[J] += B_product * differenced_contraction(
+                    A, idx, cp_index, derivative_orders, weights, Tuple(J), T
+                )
+            end
         end
     end
 
@@ -134,7 +192,7 @@ function _interpolate!(
 
     out = make_zero!!(out)
     degrees = ntuple(dim_in -> interp_dims[dim_in].degree, N_in)
-    basis_function_vals = get_basis_function_values_all(
+    basis_function_vals = get_spline_weights_all(
         A, t, idx, derivative_orders, multi_point_index
     )
 
