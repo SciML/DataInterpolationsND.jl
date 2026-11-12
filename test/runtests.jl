@@ -10,7 +10,7 @@ run_tests(;
     end,
     groups = Dict(
         "Extensions" => joinpath(@__DIR__, "Extensions", "test_symbolics_ext.jl"),
-        "GPU" => (; env = joinpath(@__DIR__, "gpu"), body = () -> nothing),
+        "GPU" => (; env = joinpath(@__DIR__, "gpu"), body = joinpath(@__DIR__, "gpu", "test_gpu.jl")),
     ),
     qa = (; env = joinpath(@__DIR__, "qa"), body = joinpath(@__DIR__, "qa", "qa.jl")),
     all = ["Core"],

@@ -37,14 +37,14 @@ function validate_t(t)
 end
 
 function validate_size_u(
-        interp_dims::NTuple{N_in, <:AbstractInterpolationDimension},
+        interp_dims::NTuple{N_in, AbstractInterpolationDimension},
         u::AbstractArray
     ) where {N_in}
     return @assert ntuple(i -> length(interp_dims[i]), N_in) == size(u)[1:N_in] "For the first N_in dimensions of u the length must match the t of the corresponding interpolation dimension."
 end
 
 function validate_size_u(
-        interp_dims::NTuple{N_in, <:BSplineInterpolationDimension},
+        interp_dims::NTuple{N_in, BSplineInterpolationDimension},
         u::AbstractArray
     ) where {N_in}
     expected_size = ntuple(dim_in -> get_n_basis_functions(interp_dims[dim_in]), N_in)
@@ -141,10 +141,10 @@ function get_idx(
 end
 
 function get_idx(
-        interp_dims::NTuple{N_in},
+        interp_dims::NTuple{N_in, AbstractInterpolationDimension},
         t::Tuple{Vararg{Number, N_in}}
     ) where {N_in}
-    return ntuple(dim_in -> get_idx(interp_dims[dim_in], t[dim_in]), N_in)
+    return map(get_idx, interp_dims, t)
 end
 
 function set_eval_idx!(
