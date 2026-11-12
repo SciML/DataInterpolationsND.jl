@@ -197,13 +197,15 @@ end
     )
     i, derivative_order_plus_1 = @index(Global, NTuple)
 
+    # The sign change of derivatives on mirrored copies is applied in `eval_kernel`
+    t_folded, _ = fold_extrapolation(itp_dim, itp_dim.t_eval[i])
     itp_dim.basis_function_eval[
         i,
         :,
         derivative_order_plus_1,
     ] .= get_basis_function_values(
         itp_dim,
-        itp_dim.t_eval[i],
+        t_folded,
         itp_dim.idx_eval[i],
         derivative_order_plus_1 - 1,
         nothing,
