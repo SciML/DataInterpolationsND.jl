@@ -300,44 +300,49 @@ end
 # `derivative_orders` (which must not all be zero), applying the recursion per dimension.
 # `knots` and `degrees` are the `knots_all` and `degree` of the interpolation dimensions.
 # It recomputes the lower order differences it needs instead of storing them, so that it does not
-# need temporaries whose size depends on the degree.
+# need temporaries whose size depends on the degree. The control points are converted to `T`
+# before differencing, so that integer control points do not wrap around and small float types do
+# not overflow.
 @inline function differenced_control_point(
         u::AbstractArray,
         knots::NTuple{N_in, AbstractVector},
         degrees::NTuple{N_in, Int},
         i::NTuple{N_in, Int},
         derivative_orders::NTuple{N_in, Int},
-        out_index::Tuple
-    ) where {N_in}
+        out_index::Tuple,
+        ::Type{T}
+    ) where {N_in, T}
     order = sum(derivative_orders)
     # Unroll the recursion for low total derivative orders, recursive function calls are slow
     order == 1 && return _differenced_control_point(
-        u, knots, degrees, i, derivative_orders, out_index, Val(1)
+        u, knots, degrees, i, derivative_orders, out_index, T, Val(1)
     )
     order == 2 && return _differenced_control_point(
-        u, knots, degrees, i, derivative_orders, out_index, Val(2)
+        u, knots, degrees, i, derivative_orders, out_index, T, Val(2)
     )
     order == 3 && return _differenced_control_point(
-        u, knots, degrees, i, derivative_orders, out_index, Val(3)
+        u, knots, degrees, i, derivative_orders, out_index, T, Val(3)
     )
-    return _differenced_control_point(u, knots, degrees, i, derivative_orders, out_index, order)
+    return _differenced_control_point(
+        u, knots, degrees, i, derivative_orders, out_index, T, order
+    )
 end
 
 # `order` is the sum of `derivative_orders`, either as an `Int` or as a `Val`
 @inline function _differenced_control_point(
-        u, knots, degrees, i, derivative_orders, out_index, order
-    )
+        u, knots, degrees, i, derivative_orders, out_index, ::Type{T}, order
+    ) where {T}
     dim_in, derivative_orders_lower, i_prev = lower_difference_order(derivative_orders, i)
     if is_one(order)
-        P = u[i..., out_index...]
-        P_prev = u[i_prev..., out_index...]
+        P = convert(T, u[i..., out_index...])
+        P_prev = convert(T, u[i_prev..., out_index...])
     else
         order_lower = minus_one(order)
         P = _differenced_control_point(
-            u, knots, degrees, i, derivative_orders_lower, out_index, order_lower
+            u, knots, degrees, i, derivative_orders_lower, out_index, T, order_lower
         )
         P_prev = _differenced_control_point(
-            u, knots, degrees, i_prev, derivative_orders_lower, out_index, order_lower
+            u, knots, degrees, i_prev, derivative_orders_lower, out_index, T, order_lower
         )
     end
     # (p - r + 1) * (P - P_prev) / (tᵢ₊ₚ₋ᵣ₊₁ - tᵢ) for derivative order r

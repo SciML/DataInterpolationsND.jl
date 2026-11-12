@@ -142,6 +142,8 @@ function _interpolate_derivative!(
         weights
     ) where {N_in, N_out}
     knots = ntuple(dim_in -> A.interp_dims[dim_in].knots_all, N_in)
+    # The type the control points are converted to before differencing
+    T = promote_type(eltype(A.u), map(eltype, weights)..., map(eltype, knots)...)
 
     for I in CartesianIndices(
             ntuple(dim_in -> (derivative_orders[dim_in] + 1):(degrees[dim_in] + 1), N_in)
@@ -152,11 +154,11 @@ function _interpolate_derivative!(
         )
         if iszero(N_out)
             out += B_product *
-                differenced_control_point(A.u, knots, degrees, cp_index, derivative_orders, ())
+                differenced_control_point(A.u, knots, degrees, cp_index, derivative_orders, (), T)
         else
             for J in CartesianIndices(out)
                 out[J] += B_product * differenced_control_point(
-                    A.u, knots, degrees, cp_index, derivative_orders, Tuple(J)
+                    A.u, knots, degrees, cp_index, derivative_orders, Tuple(J), T
                 )
             end
         end

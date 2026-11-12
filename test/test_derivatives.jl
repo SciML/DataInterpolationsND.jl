@@ -154,3 +154,19 @@ end
         @test max_scaled_error(derivative_orders) < 50
     end
 end
+
+@testset "BSpline derivatives of integer and Float32 control points" begin
+    # The control points are differenced in the output type, so they must not wrap around or overflow
+    t = [0.0, 0.3, 0.5, 0.8, 1.0]
+    dims = (BSplineInterpolationDimension(t, 3), BSplineInterpolationDimension(t, 2))
+    u_uint8 = UInt8[(i + j) % 2 == 0 ? 255 : 3 * i + j for i in 1:7, j in 1:6]
+    u_float32 = Float32[(-1)^(i + j) * 3.0f38 for i in 1:7, j in 1:6]
+    for u in (u_uint8, u_float32)
+        itp = NDInterpolation(u, dims)
+        itp_ref = NDInterpolation(Float64.(u), dims)
+        for orders in ((1, 0), (2, 1), (3, 2))
+            @test itp(0.4, 0.6; derivative_orders = orders) ≈
+                itp_ref(0.4, 0.6; derivative_orders = orders)
+        end
+    end
+end
