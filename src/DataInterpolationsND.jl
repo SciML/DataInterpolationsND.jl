@@ -31,9 +31,10 @@ struct NDInterpolation{
         ID <: AbstractInterpolationDimension,
         gType <: AbstractInterpolationCache,
         uType <: AbstractArray,
+        dimsType <: NTuple{N_in, ID},
     }
     u::uType
-    interp_dims::NTuple{N_in, ID}
+    interp_dims::dimsType
     cache::gType
     function NDInterpolation(u, interp_dims, cache)
         if interp_dims isa AbstractInterpolationDimension
@@ -44,7 +45,9 @@ struct NDInterpolation{
         @assert N_out ≥ 0 "The number of dimensions of u must be at least the number of interpolation dimensions."
         validate_size_u(interp_dims, u)
         validate_cache(cache, interp_dims, u)
-        return new{N_in, N_out, eltype(interp_dims), typeof(cache), typeof(u)}(
+        return new{
+            N_in, N_out, eltype(interp_dims), typeof(cache), typeof(u), typeof(interp_dims),
+        }(
             u, interp_dims, cache
         )
     end
