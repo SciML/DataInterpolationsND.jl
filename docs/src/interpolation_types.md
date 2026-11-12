@@ -51,8 +51,6 @@ coincide. `Constant`, `Linear` and `Extension` all hold the edge for constant di
 NURBS supports every mode except `Linear`, which is rejected when constructing an
 interpolation with `NURBSWeights`.
 
-### Holding the boundary value
-
 `ExtrapolationType.Constant` holds the value at the boundary of that dimension.
 Other dimensions continue to interpolate independently. Derivatives along a held
 axis are zero strictly outside its grid; at the boundary they use the interpolation's
@@ -74,77 +72,25 @@ voltage = NDInterpolation(
 
 ### Linear extrapolation in several dimensions
 
-`ExtrapolationType.Linear` matches DataInterpolations.jl's linear extrapolation in 1D.
-If only axis ``i`` is out of range, with ``x_b`` the query point clamped onto the grid,
-
-```math
-f(x) = f(x_b) + \frac{\partial f}{\partial x_i}(x_b)\,(x_i - x_{b,i}).
-```
-
-If several axes are out of range, the one-dimensional rules compose as a tensor product.
-At a corner where axes ``i`` and ``j`` are both out of range this gives
+With `ExtrapolationType.Linear`, the one-dimensional rule
+``f(x) = f(x_b) + \partial_i f(x_b)\,(x_i - x_{b,i})``, with ``x_b`` the query point
+clamped onto the grid, composes as a tensor product over the out-of-range axes. In a
+corner where axes ``i`` and ``j`` are both out of range,
 
 ```math
 f(x) = f(x_b) + \partial_i f(x_b)\,\Delta_i + \partial_j f(x_b)\,\Delta_j
     + \partial_i \partial_j f(x_b)\,\Delta_i \Delta_j,
-\qquad \Delta_k = x_k - x_{b,k},
+\qquad \Delta_k = x_k - x_{b,k}.
 ```
 
-so the extrapolant grows bilinearly in corners. The same composition applies when
-dimensions use different modes, for example `Constant` along one axis and `Linear`
-along another.
-
-Partial derivatives are consistent with the extrapolant: first partials are continuous
-across the boundary, the first partial along an out-of-range `Linear` axis is the
-boundary slope, and higher partials along it are zero.
-
 ```@example tutorial
+mode = ExtrapolationType.Linear
 spline = NDInterpolation(
     [sin(i) + cos(j) + 0.1i * j for i in 1:5, j in 1:5],
-    (
-        BSplineInterpolationDimension([0.0, 0.5, 1.0], 3; extrapolation = ExtrapolationType.Linear),
-        BSplineInterpolationDimension([0.0, 0.5, 1.0], 3; extrapolation = ExtrapolationType.Linear),
-    )
+    ntuple(_ -> BSplineInterpolationDimension([0.0, 0.5, 1.0], 3; extrapolation = mode), 2)
 )
-x_b = (1.0, 1.0)
-Δ = (0.5, 0.25)
-∂(orders) = spline(x_b; derivative_orders = orders)
-corner = ∂((0, 0)) + ∂((1, 0)) * Δ[1] + ∂((0, 1)) * Δ[2] + ∂((1, 1)) * Δ[1] * Δ[2]
-spline((x_b .+ Δ)...) ≈ corner
-```
-
-### Periodic and reflective extrapolation
-
-`Periodic` and `Reflective` map the query point onto the grid before evaluating, so
-they also work with multi-point evaluation. On mirrored copies of a `Reflective`
-dimension, odd derivatives along that dimension change sign.
-
-```@example tutorial
-angles = range(0, 2π; length = 9)
-periodic = NDInterpolation(
-    sin.(angles),
-    LinearInterpolationDimension(collect(angles); extrapolation = ExtrapolationType.Periodic)
-)
-periodic(1.0) ≈ periodic(1.0 + 4π)
-```
-
-### Rejecting extrapolation
-
-With `ExtrapolationType.None`, evaluating outside the grid of that dimension throws a
-[`DataInterpolationsND.ExtrapolationError`](@ref). For multi-point evaluation this check
-happens in [`eval_grid`](@ref) and [`eval_unstructured`](@ref), not when constructing
-the dimension.
-
-```@example tutorial
-strict = NDInterpolation(
-    [1.0, 2.0, 4.0],
-    LinearInterpolationDimension([0.0, 1.0, 2.0]; extrapolation = ExtrapolationType.None)
-)
-try
-    strict(2.5)
-catch err
-    err
-end
+∂(orders) = spline((1.0, 1.0); derivative_orders = orders)
+spline(1.5, 1.25) ≈ ∂((0, 0)) + ∂((1, 0)) * 0.5 + ∂((0, 1)) * 0.25 + ∂((1, 1)) * 0.5 * 0.25
 ```
 
 ## Constant Interpolation
