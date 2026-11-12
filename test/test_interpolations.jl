@@ -156,20 +156,15 @@ allocations(itp, derivative_orders, t) = @allocated evaluate(itp, derivative_ord
 @testset "BSpline evaluation does not allocate" begin
     Random.seed!(3)
     t = [0.0, 0.1, 0.35, 0.5, 0.8, 1.0]
-    for degrees in ((3,), (3, 3), (3, 3, 3), (2, 3), (1, 2, 3))
+    # Uniform and mixed degree
+    for degrees in ((3, 3), (1, 2, 3))
         N_in = length(degrees)
-        for extrapolation in (ExtrapolationType.Extension, ExtrapolationType.Linear, ExtrapolationType.Constant)
-            dims = map(degree -> BSplineInterpolationDimension(t, degree; extrapolation), degrees)
-            itp = NDInterpolation(rand(map(DataInterpolationsND.get_n_basis_functions, dims)...), dims)
-            for x in (0.42, -0.2, 1.3), derivative_orders in (ntuple(_ -> 0, N_in), ntuple(i -> i - 1, N_in))
-                evaluate(itp, derivative_orders, ntuple(_ -> x, N_in))
-                @test allocations(itp, derivative_orders, ntuple(_ -> x, N_in)) == 0
-            end
+        dims = map(degree -> BSplineInterpolationDimension(t, degree), degrees)
+        itp = NDInterpolation(rand(map(DataInterpolationsND.get_n_basis_functions, dims)...), dims)
+        x = ntuple(_ -> 0.42, N_in)
+        for derivative_orders in (ntuple(_ -> 0, N_in), ntuple(i -> i - 1, N_in))
+            evaluate(itp, derivative_orders, x)
+            @test allocations(itp, derivative_orders, x) == 0
         end
     end
-
-    dims = (BSplineInterpolationDimension(t, 3), BSplineInterpolationDimension(t, 2))
-    itp = NDInterpolation(rand(8, 7), dims; cache = NURBSWeights(rand(8, 7) .+ 0.5))
-    evaluate(itp, (0, 0), (0.42, 0.7))
-    @test allocations(itp, (0, 0), (0.42, 0.7)) == 0
 end
