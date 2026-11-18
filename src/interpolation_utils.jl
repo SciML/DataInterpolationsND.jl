@@ -90,14 +90,14 @@ end
 
 function make_out(
         interp::NDInterpolation{N_in, 0},
-        t::NTuple{N_in, >:Number}
+        t::Tuple{Vararg{Number, N_in}}
     ) where {N_in}
     return zero(promote_type(eltype(interp.u), map(typeof, t)...))
 end
 
 function make_out(
         interp::NDInterpolation{N_in},
-        t::NTuple{N_in, >:Number}
+        t::Tuple{Vararg{Number, N_in}}
     ) where {N_in}
     return similar(
         interp.u, promote_type(eltype(interp.u), map(eltype, t)...), get_output_size(interp)
@@ -164,7 +164,8 @@ end
         interp_dim
     )
     i = @index(Global, Linear)
-    interp_dim.idx_eval[i] = get_idx(interp_dim, interp_dim.t_eval[i])
+    t_folded, _ = fold_extrapolation(interp_dim, interp_dim.t_eval[i])
+    interp_dim.idx_eval[i] = get_idx(interp_dim, t_folded)
 end
 
 function typed_nan(x::AbstractArray{T}) where {T <: AbstractFloat}
