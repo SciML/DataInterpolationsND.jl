@@ -49,6 +49,8 @@ function cox_de_boor(
     end
 end
 
+get_degree(::BSplineInterpolationDimension{<:Any, <:Any, <:Any, <:Any, <:Any, D}) where {D} = D
+
 # Basis function `Bᵢₚ` (Where `p` is the degree) has support on the interval `[tᵢ, tᵢ₊ₚ₊₁)`
 # where these `tᵢ` come from `itp_dim.knots_all`. That means that an input `t ∈ [tⱼ, tⱼ₊₁)` (where `j = idx`)
 # lies in the support of `Bᵢₚ` for `i = j - p, …, j`, i.e. `p + 1` of the basis functions.
@@ -60,7 +62,9 @@ end
 #          ⋮
 # (Bⱼ₋ₚ ₚ, Bⱼ₋ₚ₊₁ ₚ, …, Bⱼₚ, 0)
 #
-# The trailing zero is just a convenience for the algorithm and is removed in the output
+# The trailing zero is just a convenience for the algorithm and is removed in the output.
+# The degree `p` is a type parameter of the interpolation dimension, so these tuples have a
+# length known at compile time.
 function get_basis_function_values(
         itp_dim::BSplineInterpolationDimension,
         t::T_t,
@@ -69,23 +73,24 @@ function get_basis_function_values(
         multi_point_index::Nothing,
         dim_in::Integer
     ) where {T_t <: Number}
-    (; degree, knots_all) = itp_dim
+    (; knots_all) = itp_dim
+    degree = get_degree(itp_dim)
     T_eval = eltype(itp_dim.basis_function_eval)
     # Use a concrete zero value for type stability
     _zero = zero(promote_type(T_t, T_eval))
     _one = one(promote_type(T_t, T_eval))
-    degree_plus_1 = degree + 1
+    degree_plus_1 = Val(degree + 1)
 
     if derivative_order > degree
         return ntuple(_ -> _zero, degree_plus_1)
     end
     iszero(degree) && return (_one,)
 
-    degree_plus_2 = degree + 2
+    degree_plus_2 = Val(degree + 2)
 
     # Degree 0 basis function values
     basis_function_values = ntuple(
-        k -> (k == degree_plus_1) ? _one : _zero,
+        k -> (k == degree + 1) ? _one : _zero,
         degree_plus_2
     )
 
@@ -101,7 +106,7 @@ function get_basis_function_values(
             slope = _compute_basis_function_values(
                 basis_function_values, knots_all, edge, idx, degree, 1, degree_plus_2
             )
-            derivative_order == 1 && return slope[1:degree_plus_1]
+            derivative_order == 1 && return _drop_last(slope)
             values = _compute_basis_function_values(
                 basis_function_values, knots_all, edge, idx, degree, 0, degree_plus_2
             )
@@ -115,8 +120,11 @@ function get_basis_function_values(
         basis_function_values, knots_all, t_eval, idx, degree, derivative_order, degree_plus_2
     )
 
-    return basis_function_values[1:degree_plus_1]
+    return _drop_last(basis_function_values)
 end
+
+# Remove the trailing zero of the basis function values
+_drop_last(values::NTuple{N, Any}) where {N} = ntuple(i -> values[i], Val(N - 1))
 
 # Helper function to avoid type instability from captured variables in closures
 function _compute_basis_function_values(
@@ -174,11 +182,12 @@ function get_basis_function_values_all(
         derivative_orders::NTuple{N_in, <:Integer},
         multi_point_index
     ) where {N_in, N_out}
-    return ntuple(
-        dim_in -> get_basis_function_values(
-            A.interp_dims[dim_in], t[dim_in], idx[dim_in], derivative_orders[dim_in], multi_point_index, dim_in
+    # `map` rather than indexing with `dim_in`, as the dimensions can differ in type (degree)
+    return map(
+        (itp_dim, t_, idx_, derivative_order, dim_in) -> get_basis_function_values(
+            itp_dim, t_, idx_, derivative_order, multi_point_index, dim_in
         ),
-        N_in
+        A.interp_dims, t, idx, derivative_orders, ntuple(identity, Val(N_in))
     )
 end
 

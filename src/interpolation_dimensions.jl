@@ -27,19 +27,23 @@ struct LinearInterpolationDimension{
     extrapolation::ExtrapolationType.T
     function LinearInterpolationDimension(
             t, t_eval, idx_eval,
-            extrapolation::ExtrapolationType.T = ExtrapolationType.Linear
+            extrapolation::ExtrapolationType.T = ExtrapolationType.Linear;
+            validate::Bool = true
         )
-        validate_t(t)
+        validate && validate_t(t)
         return new{typeof(t), typeof(t_eval), typeof(idx_eval)}(t, t_eval, idx_eval, extrapolation)
     end
 end
 
+# `t` was validated on construction; adapting only moves the data (possibly to a device
+# where it cannot be read from the host), so the validation is skipped here.
 function adapt_structure(to, interp_dim::LinearInterpolationDimension)
     return LinearInterpolationDimension(
         adapt_structure(to, interp_dim.t),
         adapt_structure(to, interp_dim.t_eval),
         adapt_structure(to, interp_dim.idx_eval),
-        interp_dim.extrapolation,
+        interp_dim.extrapolation;
+        validate = false,
     )
 end
 
@@ -86,9 +90,10 @@ struct ConstantInterpolationDimension{
     extrapolation::ExtrapolationType.T
     function ConstantInterpolationDimension(
             t, left, t_eval, idx_eval,
-            extrapolation::ExtrapolationType.T = ExtrapolationType.Constant
+            extrapolation::ExtrapolationType.T = ExtrapolationType.Constant;
+            validate::Bool = true
         )
-        validate_t(t)
+        validate && validate_t(t)
         return new{typeof(t), typeof(t_eval), typeof(idx_eval)}(
             t, left, t_eval, idx_eval, extrapolation
         )
@@ -101,7 +106,8 @@ function adapt_structure(to, interp_dim::ConstantInterpolationDimension)
         adapt_structure(to, interp_dim.left),
         adapt_structure(to, interp_dim.t_eval),
         adapt_structure(to, interp_dim.idx_eval),
-        interp_dim.extrapolation,
+        interp_dim.extrapolation;
+        validate = false,
     )
 end
 
@@ -150,6 +156,7 @@ struct BSplineInterpolationDimension{
         idxType <: AbstractVector{<:Integer},
         evalType <: AbstractArray{<:Number, 3},
         mType <: AbstractVector{<:Integer},
+        D,
     } <: AbstractInterpolationDimension
     t::tType
     knots_all::tType
@@ -163,12 +170,13 @@ struct BSplineInterpolationDimension{
     function BSplineInterpolationDimension(
             t, knots_all, t_eval, idx_eval, degree, max_derivative_order_eval,
             basis_function_eval, multiplicities,
-            extrapolation::ExtrapolationType.T = ExtrapolationType.Extension
+            extrapolation::ExtrapolationType.T = ExtrapolationType.Extension;
+            validate::Bool = true
         )
-        validate_t(t)
+        validate && validate_t(t)
         return new{
             typeof(t), typeof(t_eval), typeof(idx_eval),
-            typeof(basis_function_eval), typeof(multiplicities),
+            typeof(basis_function_eval), typeof(multiplicities), Int(degree),
         }(
             t, knots_all, t_eval, idx_eval, degree, max_derivative_order_eval,
             basis_function_eval, multiplicities, extrapolation
@@ -186,7 +194,8 @@ function adapt_structure(to, interp_dim::BSplineInterpolationDimension)
         adapt_structure(to, interp_dim.max_derivative_order_eval),
         adapt_structure(to, interp_dim.basis_function_eval),
         adapt_structure(to, interp_dim.multiplicities),
-        interp_dim.extrapolation,
+        interp_dim.extrapolation;
+        validate = false,
     )
 end
 

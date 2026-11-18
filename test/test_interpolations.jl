@@ -148,3 +148,23 @@ end
     @test allunique(points_on_circle[2:end])
     @test all(point -> point[1]^2 + point[2]^2 ≈ 1, points_on_circle)
 end
+
+# Scalar BSpline evaluation must not allocate: this is what makes it usable inside GPU kernels
+evaluate(itp, derivative_orders, t) = itp(t; derivative_orders)
+allocations(itp, derivative_orders, t) = @allocated evaluate(itp, derivative_orders, t)
+
+@testset "BSpline evaluation does not allocate" begin
+    Random.seed!(3)
+    t = [0.0, 0.1, 0.35, 0.5, 0.8, 1.0]
+    # Uniform and mixed degree
+    for degrees in ((3, 3), (1, 2, 3))
+        N_in = length(degrees)
+        dims = map(degree -> BSplineInterpolationDimension(t, degree), degrees)
+        itp = NDInterpolation(rand(map(DataInterpolationsND.get_n_basis_functions, dims)...), dims)
+        x = ntuple(_ -> 0.42, N_in)
+        for derivative_orders in (ntuple(_ -> 0, N_in), ntuple(i -> i - 1, N_in))
+            evaluate(itp, derivative_orders, x)
+            @test allocations(itp, derivative_orders, x) == 0
+        end
+    end
+end
