@@ -7,6 +7,7 @@ run_tests(;
         @safetestset "Derivatives" include("test_derivatives.jl")
         @safetestset "DataInterpolations" include("test_datainterpolations_comparison.jl")
         @safetestset "Interface" include("test_interface.jl")
+        @safetestset "Show" include("test_show.jl")
     end,
     groups = Dict(
         "Extensions" => joinpath(@__DIR__, "Extensions", "test_symbolics_ext.jl"),
