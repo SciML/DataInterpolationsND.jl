@@ -127,3 +127,48 @@ end
     )
     @test res ≈ interp_scalar(0.4, 0.8; derivative_orders = (1, 1))
 end
+
+# Symbolic functions of type `NDInterpolation`
+@testset "Symbolic interpolation differentiation" begin
+    @variables s (p::NDInterpolation)(..)
+    p_sym = unwrap(p)
+    ex = p(x, y)
+
+    for (var, orders) in ((x, (1, 0)), (y, (0, 1)))
+        der = expand_derivatives(Differential(var)(ex))
+        @test SU.symtype(unwrap(der)) == Real
+        @test !Symbolics.hasderiv(unwrap(der))
+        @test isequal(SU.scalarize(unwrap(der)), unwrap(der))
+        f = build_function(der, p_sym, x, y; expression = Val{false})
+        @test f(interp_scalar, 0.4, 0.8) ≈ interp_scalar(0.4, 0.8; derivative_orders = orders)
+    end
+
+    der = expand_derivatives(Differential(s)(p(2.0 * s, s)))
+    f = build_function(der, p_sym, s; expression = Val{false})
+    @test f(interp_scalar, 0.4) ≈ 2.0 * interp_scalar(0.8, 0.4; derivative_orders = (1, 0)) +
+        interp_scalar(0.8, 0.4; derivative_orders = (0, 1))
+
+    der2 = expand_derivatives(Differential(y)(Differential(x)(ex)))
+    @test !Symbolics.hasderiv(unwrap(der2))
+    f = build_function(der2, p_sym, x, y; expression = Val{false})
+    @test f(interp_scalar, 0.4, 0.8) ≈ interp_scalar(0.4, 0.8; derivative_orders = (1, 1))
+
+    der = expand_derivatives(Differential(x)(ex))
+    res = substitute(der, Dict(p => interp_scalar, x => 0.4, y => 0.8); fold = Val(true))
+    @test Symbolics.value(res) ≈ interp_scalar(0.4, 0.8; derivative_orders = (1, 0))
+end
+
+@testset "Symbolic array-output interpolation differentiation" begin
+    @variables (q::NDInterpolation)(..)[1:2]
+    q_sym = unwrap(q)
+    der = Symbolics.derivative(q(x, y)[2], y)
+    @test SU.symtype(unwrap(der)) == Real
+    @test !Symbolics.hasderiv(unwrap(der))
+    f = build_function(der, q_sym, x, y; expression = Val{false})
+    @test f(interp, 0.4, 0.8) ≈ interp(0.4, 0.8; derivative_orders = (0, 1))[2]
+
+    # the partial derivative keeps its array shape when the interpolation is substituted
+    partial = SU.arguments(unwrap(substitute(der, Dict(q => interp))))[1]
+    @test SU.symtype(partial) == Vector{Real}
+    @test size(partial) == (2,)
+end
