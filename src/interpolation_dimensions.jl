@@ -221,14 +221,7 @@ function BSplineInterpolationDimension(
     @assert all(m -> 1 ≤ m ≤ (degree + 1), multiplicities) "All multiplicities must be between 1 and degree + 1."
 
     knots_all = similar(t, sum(multiplicities))
-    backend = get_backend(t)
-    expand_knot_vector_kernel(backend)(
-        knots_all,
-        t,
-        multiplicities,
-        ndrange = length(t)
-    )
-    synchronize(backend)
+    expand_knot_vector!(execution_backend(t), knots_all, t, multiplicities)
 
     idx_eval = similar(t_eval, Int)
     basis_function_eval = similar(

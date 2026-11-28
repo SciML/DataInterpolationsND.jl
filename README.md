@@ -10,7 +10,7 @@
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor%27s%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
-DataInterpolationsND.jl is a library for interpolating arbitrarily high dimensional array data. The domain of this interpolation is a (hyper)rectangle. Support is included for efficient evaluation at multiple points in the domain through [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl).
+DataInterpolationsND.jl is a library for interpolating arbitrarily high dimensional array data. The domain of this interpolation is a (hyper)rectangle. Support is included for efficient evaluation at multiple points in the domain. CPU evaluation uses plain loops; load [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl) for GPU construction and batch evaluation.
 
 For one dimensional interpolation see also [DataInterpolations.jl](https://github.com/SciML/DataInterpolations.jl).
 

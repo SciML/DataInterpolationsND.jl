@@ -1,6 +1,4 @@
 module DataInterpolationsND
-using KernelAbstractions: KernelAbstractions, @Const, @index, @kernel, get_backend,
-    synchronize
 import Adapt: adapt_structure
 using EllipsisNotation: EllipsisNotation, (..)
 using RecipesBase: RecipesBase, @recipe, @series
@@ -65,6 +63,12 @@ function adapt_structure(to, interp::NDInterpolation)
         adapt_structure(to, interp.cache),
     )
 end
+
+# The extension supplies backend selection for arrays when KA is loaded.
+# CPU work always uses the same loop implementations.
+struct CPUBackend end
+execution_backend(_) = CPUBackend()
+execution_backend(::Union{Array, AbstractRange}) = CPUBackend()
 
 include("extrapolation.jl")
 include("interpolation_dimensions.jl")

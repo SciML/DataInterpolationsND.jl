@@ -150,21 +150,19 @@ end
 function set_eval_idx!(
         interp_dim::AbstractInterpolationDimension,
     )
-    backend = get_backend(interp_dim.t)
-    if !isempty(interp_dim.t_eval)
-        set_idx_kernel(backend)(
-            interp_dim,
-            ndrange = length(interp_dim.t_eval)
-        )
-    end
-    return synchronize(backend)
+    return set_eval_idx!(execution_backend(interp_dim.t), interp_dim)
 end
 
-@kernel function set_idx_kernel(
-        interp_dim
-    )
-    i = @index(Global, Linear)
+function set_eval_idx!(::CPUBackend, interp_dim)
+    for i in eachindex(interp_dim.t_eval)
+        set_eval_idx_point!(interp_dim, i)
+    end
+    return nothing
+end
+
+function set_eval_idx_point!(interp_dim, i)
     interp_dim.idx_eval[i] = get_idx(interp_dim, interp_dim.t_eval[i])
+    return nothing
 end
 
 function typed_nan(x::AbstractArray{T}) where {T <: AbstractFloat}

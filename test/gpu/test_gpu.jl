@@ -2,6 +2,7 @@ using DataInterpolationsND
 using DataInterpolationsND: get_n_basis_functions
 using Adapt
 using CUDA
+using KernelAbstractions
 using Random
 using Test
 

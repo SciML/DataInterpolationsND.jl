@@ -1,9 +1,11 @@
-@kernel function expand_knot_vector_kernel(
-        knots_all,
-        @Const(knot_values),
-        @Const(multiplicities)
-    )
-    i = @index(Global, Linear)
+function expand_knot_vector!(::CPUBackend, knots_all, knot_values, multiplicities)
+    for i in eachindex(knot_values)
+        expand_knot_vector_point!(knots_all, knot_values, multiplicities, i)
+    end
+    return nothing
+end
+
+function expand_knot_vector_point!(knots_all, knot_values, multiplicities, i)
     knot_value = knot_values[i]
 
     mult_sum = 0
@@ -17,6 +19,7 @@
     for k in idx_start:idx_end
         knots_all[k] = knot_value
     end
+    return
 end
 
 safe_div(a, b) = iszero(b) ? zero(promote_type(typeof(a), typeof(b))) : a / b
@@ -192,21 +195,20 @@ function get_basis_function_values_all(
 end
 
 function set_basis_function_eval!(itp_dim::BSplineInterpolationDimension)::Nothing
-    backend = get_backend(itp_dim.t_eval)
-    basis_function_eval_kernel(backend)(
-        itp_dim,
-        ndrange = (length(itp_dim.t_eval), itp_dim.max_derivative_order_eval + 1)
-    )
-    synchronize(backend)
+    return set_basis_function_eval!(execution_backend(itp_dim.t_eval), itp_dim)
+end
+
+function set_basis_function_eval!(::CPUBackend, itp_dim)
+    for derivative_order_plus_1 in 1:(itp_dim.max_derivative_order_eval + 1)
+        for i in eachindex(itp_dim.t_eval)
+            set_basis_function_eval_point!(itp_dim, i, derivative_order_plus_1)
+        end
+    end
     return nothing
 end
 
-@kernel function basis_function_eval_kernel(
-        itp_dim
-    )
-    i, derivative_order_plus_1 = @index(Global, NTuple)
-
-    itp_dim.basis_function_eval[
+function set_basis_function_eval_point!(itp_dim, i, derivative_order_plus_1)
+    return itp_dim.basis_function_eval[
         i,
         :,
         derivative_order_plus_1,
@@ -261,4 +263,8 @@ Weights associated with the control points to define a NURBS geometry.
 """
 struct NURBSWeights{W <: AbstractArray} <: AbstractInterpolationCache
     weights::W
+end
+
+function adapt_structure(to, cache::NURBSWeights)
+    return NURBSWeights(adapt_structure(to, cache.weights))
 end

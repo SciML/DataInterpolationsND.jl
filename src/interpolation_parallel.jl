@@ -37,17 +37,9 @@ function eval_unstructured!(
         derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
     ) where {N_in}
     validate_derivative_orders(derivative_orders, interp; multi_point = true)
-    backend = get_backend(out)
     @assert all(i -> length(interp.interp_dims[i].t_eval) == size(out, 1), N_in) "The t_eval of all interpolation dimensions must have the same length as the first dimension of out."
     @assert size(out)[2:end] == get_output_size(interp) "The size of the last N_out dimensions of out must be the same as the output size of the interpolation."
-    eval_kernel(backend)(
-        out,
-        interp,
-        derivative_orders,
-        false,
-        ndrange = size(out, 1)
-    )
-    synchronize(backend)
+    evaluate_batch!(execution_backend(out), out, interp, derivative_orders, false)
     return out
 end
 
@@ -88,30 +80,15 @@ function eval_grid!(
         derivative_orders::NTuple{N_in, <:Integer} = ntuple(_ -> 0, N_in)
     ) where {N_in}
     validate_derivative_orders(derivative_orders, interp; multi_point = true)
-    backend = get_backend(out)
     @assert all(i -> size(out, i) == length(interp.interp_dims[i].t_eval), N_in) "For the first N_in dimensions of out the length must match the t_eval of the corresponding interpolation dimension."
     @assert size(out)[(N_in + 1):end] == get_output_size(interp) "The size of the last N_out dimensions of out must be the same as the output size of the interpolation."
-    eval_kernel(backend)(
-        out,
-        interp,
-        derivative_orders,
-        true,
-        ndrange = size(out)[1:N_in]
-    )
-    synchronize(backend)
+    evaluate_batch!(execution_backend(out), out, interp, derivative_orders, true)
     return out
 end
 
-@kernel function eval_kernel(
-        out,
-        @Const(A),
-        derivative_orders,
-        eval_grid
-    )
+function evaluate_point!(out, A, derivative_orders, ::Val{eval_grid}, k) where {eval_grid}
     N_in = length(A.interp_dims)
     N_out = ndims(A.u) - N_in
-
-    k = @index(Global, NTuple)
 
     if eval_grid
         t_eval = ntuple(i -> A.interp_dims[i].t_eval[k[i]], N_in)
@@ -125,7 +102,7 @@ end
     # the linear index. Convert to scalar for proper method dispatch in BSpline code.
     multi_point_index = eval_grid ? k : only(k)
 
-    if iszero(N_out)
+    return if iszero(N_out)
         out[k...] = _interpolate!(
             make_out(A, t_eval), A, t_eval, idx_eval, derivative_orders, multi_point_index
         )
@@ -135,4 +112,13 @@ end
             A, t_eval, idx_eval, derivative_orders, multi_point_index
         )
     end
+end
+
+function evaluate_batch!(::CPUBackend, out, interp::NDInterpolation{N_in}, derivative_orders, grid) where {N_in}
+    dims = grid ? size(out)[1:N_in] : (size(out, 1),)
+    mode = Val(grid)
+    for index in CartesianIndices(dims)
+        evaluate_point!(out, interp, derivative_orders, mode, Tuple(index))
+    end
+    return out
 end

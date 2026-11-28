@@ -42,7 +42,7 @@ function _interpolate!(
         if iszero(N_out)
             out += c * A.u[J...]
         else
-            @. out += c * A.u[J...]
+            @views @. out += c * A.u[J...]
         end
     end
     return out
@@ -114,7 +114,7 @@ function _interpolate!(
         if iszero(N_out)
             out += B_product * A.u[cp_index...]
         else
-            out .+= B_product * view(A.u, cp_index..., ..)
+            out .+= B_product .* view(A.u, cp_index..., ..)
         end
     end
 
@@ -151,7 +151,7 @@ function _interpolate!(
         if iszero(N_out)
             out += product * A.u[cp_index...]
         else
-            out .+= product * view(A.u, cp_index..., ..)
+            out .+= product .* view(A.u, cp_index..., ..)
         end
     end
 
